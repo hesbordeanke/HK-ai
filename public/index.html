@@ -730,6 +730,28 @@ function toggleSidebar() {
   document.querySelector('.sb-toggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
 }
 
+// ===== NAVIGATION =====
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+
+  document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else {
+    document.querySelectorAll('.sb-item').forEach(n => {
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+    });
+  }
+
+  const titles = {chat:'Chat', capabilities:'Capabilities', tasks:'Tasks', generate:'Generate',
+    video:'Video AI', photo:'Photo AI', integrations:'Integrations', analytics:'Analytics', settings:'Settings'};
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = titles[id] || id;
+
+  if (id === 'analytics') buildBarChart();
+}
+
 // ===== MODEL =====
 function toggleModelDropdown() {
   document.getElementById('model-dropdown').classList.toggle('open');
@@ -740,47 +762,54 @@ function setModel(name, el) {
   document.querySelectorAll('.model-opt').forEach(o => o.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('model-dropdown').classList.remove('open');
-  showToast(`Switched to ${name}`, '✦');
+  showToast('Switched to ' + name, '✦');
   event.stopPropagation();
 }
 document.addEventListener('click', e => {
-  if (!e.target.closest('#model-selector')) document.getElementById('model-dropdown').classList.remove('open');
+  if (!e.target.closest('#model-selector')) {
+    const dd = document.getElementById('model-dropdown');
+    if (dd) dd.classList.remove('open');
+  }
 });
 
 // ===== SOURCES =====
 function toggleSource(src) {
   sources[src] = !sources[src];
   const pill = document.getElementById('pill-' + src);
-  pill.classList.toggle('off', !sources[src]);
+  if (pill) pill.classList.toggle('off', !sources[src]);
 }
 
 // ===== CHAT =====
 function hideWelcome() {
   const w = document.getElementById('welcome-screen');
-  if (w) { w.style.display = 'none'; }
-  document.getElementById('quick-suggestions').style.display = 'none';
+  if (w) w.style.display = 'none';
+  const qs = document.getElementById('quick-suggestions');
+  if (qs) qs.style.display = 'none';
 }
 
 function usePrompt(el) {
-  document.getElementById('msg-input').value = el.querySelector('.sc-text').textContent;
+  const input = document.getElementById('msg-input');
+  if (input) input.value = el.querySelector('.sc-text').textContent;
   sendMessage();
 }
+
 function useChip(el) {
   const map = {
     '🌐 Latest news': 'What is the latest news happening around the world today?',
     '💻 Write code': 'Write me a useful code snippet. What language and task would you suggest?',
     '📊 Analyze data': 'Help me understand how to analyze data effectively.',
     '🔬 Research topic': 'Research a fascinating topic and give me a detailed summary.',
-    '✍️ Write for me': 'Write a compelling piece of content. What topic should I give you?',
+    '✍️ Write for me': 'Write a compelling piece of content. What topic?',
     '🧮 Calculate': 'Help me with a calculation or math problem.'
   };
-  document.getElementById('msg-input').value = map[el.textContent.trim()] || el.textContent;
-  document.getElementById('msg-input').focus();
+  const input = document.getElementById('msg-input');
+  if (input) { input.value = map[el.textContent.trim()] || el.textContent; input.focus(); }
 }
 
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
+
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 140) + 'px';
@@ -795,64 +824,37 @@ async function sendMessage() {
   document.getElementById('send-btn').disabled = true;
   hideWelcome();
 
-  // Add user message
   appendUserMsg(text);
   input.value = '';
   input.style.height = 'auto';
   msgHistory.push({ role: 'user', content: text });
-
-  // Add to sidebar history
   addToHistory(text);
 
-  // Show search indicator if web is on
   let searchEl = null;
-  if (sources.web) {
-    searchEl = showSearchIndicator();
-  }
-
-  // Show typing
+  if (sources.web) searchEl = showSearchIndicator();
   const typingId = showTyping();
 
   try {
-    // Build system prompt
-    const systemPrompt = `You are HK AI, a powerful general-purpose AI assistant that combines web search results, deep reasoning, and knowledge from multiple AI sources to give the most accurate, up-to-date, and comprehensive answers possible.
-
-Your traits:
-- You synthesize information from multiple sources to give the best answer
-- You are direct, clear, and thorough
-- You use markdown formatting: **bold**, bullet points, numbered lists, code blocks when appropriate  
-- You cite when using recent/web information
-- You acknowledge uncertainty when you don't know something
-- You are helpful for ANY topic: technology, science, news, coding, writing, math, creative tasks, research
-
-Current active sources: ${Object.entries(sources).filter(([,v])=>v).map(([k])=>k).join(', ')}
-Model: ${currentModel}
-
-Always give the best, most complete answer you can. If the question is about current events or recent information, note that and provide the most recent info you have.`;
-
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: msgHistory,
-        useWebSearch: sources.web
-      })
+      body: JSON.stringify({ messages: msgHistory, useWebSearch: sources.web })
     });
-
     const data = await response.json();
     let fullText = data.text || data.error || 'No response received.';
-    if (!response.ok) fullText = `⚠️ Error: ${data.error || 'Something went wrong.'}`;
+    if (!response.ok) fullText = '⚠️ Error: ' + (data.error || 'Something went wrong.');
 
     removeElement(typingId);
     if (searchEl) removeElement(searchEl);
 
-    msgHistory.push({ role: 'assistant', content: fullText || 'No response received.' });
-    appendAIMsg(fullText || 'No response received.');
-
+    msgHistory.push({ role: 'assistant', content: fullText });
+    appendAIMsg(fullText);
   } catch (err) {
     removeElement(typingId);
     if (searchEl) removeElement(searchEl);
-    appendAIMsg(`⚠️ **Connection error.** Could not reach HK AI servers. Please check your connection and try again.\n\n_Error: ${err.message}_`);
+    appendAIMsg('⚠️ **Connection error.** Could not reach HK AI servers.
+
+_Error: ' + err.message + '_');
   }
 
   isLoading = false;
@@ -863,11 +865,7 @@ function appendUserMsg(text) {
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div');
   div.className = 'msg user';
-  div.innerHTML = `
-    <div class="msg-av user">H</div>
-    <div class="msg-content">
-      <div class="msg-bubble user">${escHtml(text)}</div>
-    </div>`;
+  div.innerHTML = '<div class="msg-av user">H</div><div class="msg-content"><div class="msg-bubble user">' + escHtml(text) + '</div></div>';
   inner.appendChild(div);
   scrollToBottom();
 }
@@ -876,25 +874,14 @@ function appendAIMsg(text) {
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div');
   div.className = 'msg';
-
   const activeSources = Object.entries(sources).filter(([,v])=>v).map(([k])=>k);
   const srcTagsHtml = activeSources.map(s => {
     const map = {web:['🌐','web','Web Search'],claude:['✦','claude','Claude AI'],deep:['🔬','deep','Deep Research']};
     const [icon, cls, label] = map[s] || ['•','claude',s];
-    return `<span class="src-tag ${cls}">${icon} ${label}</span>`;
+    return '<span class="src-tag ' + cls + '">' + icon + ' ' + label + '</span>';
   }).join('');
-
-  div.innerHTML = `
-    <div class="msg-av ai">✦</div>
-    <div class="msg-content">
-      <div class="source-tags">${srcTagsHtml}</div>
-      <div class="msg-bubble ai">${formatMsg(text)}</div>
-      <div class="msg-actions">
-        <button class="act-btn" onclick="copyMsg(this)">📋 Copy</button>
-        <button class="act-btn" onclick="regenMsg()">↺ Retry</button>
-      </div>
-    </div>`;
-  document.getElementById('chat-inner').appendChild(div);
+  div.innerHTML = '<div class="msg-av ai">✦</div><div class="msg-content"><div class="source-tags">' + srcTagsHtml + '</div><div class="msg-bubble ai">' + formatMsg(text) + '</div><div class="msg-actions"><button class="act-btn" onclick="copyMsg(this)">📋 Copy</button><button class="act-btn" onclick="regenMsg()">↺ Retry</button></div></div>';
+  inner.appendChild(div);
   scrollToBottom();
 }
 
@@ -902,16 +889,8 @@ function showTyping() {
   const id = 'typing-' + Date.now();
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div');
-  div.className = 'msg';
-  div.id = id;
-  div.innerHTML = `
-    <div class="msg-av ai">✦</div>
-    <div class="msg-content">
-      <div class="typing-bubble">
-        <div class="typing-dots"><span></span><span></span><span></span></div>
-        <div class="typing-label">HK AI is thinking...</div>
-      </div>
-    </div>`;
+  div.className = 'msg'; div.id = id;
+  div.innerHTML = '<div class="msg-av ai">✦</div><div class="msg-content"><div class="typing-bubble"><div class="typing-dots"><span></span><span></span><span></span></div><div class="typing-label">HK AI is thinking...</div></div></div>';
   inner.appendChild(div);
   scrollToBottom();
   return id;
@@ -920,27 +899,15 @@ function showTyping() {
 function showSearchIndicator() {
   const id = 'search-' + Date.now();
   const inner = document.getElementById('chat-inner');
-  const div = document.createElement('div');
-  div.id = id;
-  div.innerHTML = `
-    <div class="search-indicator">
-      <div class="search-spin"></div>
-      Searching the web for latest information...
-    </div>`;
+  const div = document.createElement('div'); div.id = id;
+  div.innerHTML = '<div class="search-indicator"><div class="search-spin"></div>Searching the web for latest information...</div>';
   inner.appendChild(div);
   scrollToBottom();
   return id;
 }
 
-function removeElement(id) {
-  const el = document.getElementById(id);
-  if (el) el.remove();
-}
-
-function scrollToBottom() {
-  const wrap = document.getElementById('chat-wrap');
-  wrap.scrollTop = wrap.scrollHeight;
-}
+function removeElement(id) { const el = document.getElementById(id); if (el) el.remove(); }
+function scrollToBottom() { const w = document.getElementById('chat-wrap'); if (w) w.scrollTop = w.scrollHeight; }
 
 function formatMsg(text) {
   return text
@@ -948,18 +915,22 @@ function formatMsg(text) {
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*(.*?)\*/g,'<em>$1</em>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/```(\w*)\n([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+    .replace(/```(\w*)
+([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
     .replace(/^### (.*$)/gm,'<strong style="font-size:14px;color:var(--a1)">$1</strong>')
     .replace(/^## (.*$)/gm,'<strong style="font-size:15px">$1</strong>')
     .replace(/^# (.*$)/gm,'<strong style="font-size:16px">$1</strong>')
     .replace(/^\- (.*$)/gm,'<li>$1</li>')
     .replace(/^(\d+)\. (.*$)/gm,'<li>$2</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
-    .replace(/\n/g,'<br>');
+    .replace(/(<li>.*<\/li>
+?)+/g, s => '<ul>' + s + '</ul>')
+    .replace(/
+/g,'<br>');
 }
 
 function escHtml(t) {
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/
+/g,'<br>');
 }
 
 function copyMsg(btn) {
@@ -973,9 +944,8 @@ function regenMsg() {
     const lastUser = msgHistory[msgHistory.length - 1];
     if (lastUser && lastUser.role === 'user') {
       msgHistory.pop();
-      document.querySelectorAll('.msg').forEach((m, i, all) => {
-        if (i >= all.length - 2) m.remove();
-      });
+      const msgs = document.querySelectorAll('.msg');
+      [msgs[msgs.length-1], msgs[msgs.length-2]].forEach(m => { if(m) m.remove(); });
       document.getElementById('msg-input').value = lastUser.content;
       sendMessage();
     }
@@ -984,29 +954,14 @@ function regenMsg() {
 
 function newChat() {
   msgHistory = [];
-  document.getElementById('chat-inner').innerHTML = '';
-  // Re-add welcome
+  const inner = document.getElementById('chat-inner');
+  inner.innerHTML = '';
   const welcome = document.createElement('div');
-  welcome.className = 'welcome';
-  welcome.id = 'welcome-screen';
-  welcome.innerHTML = `
-    <div class="welcome-icon">✦</div>
-    <h1>Ask me anything.</h1>
-    <p>HK AI searches the web, reasons with advanced AI, and synthesizes the best answer from multiple sources — all in real time.</p>
-    <div class="source-badges">
-      <div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div>
-      <div class="src-badge"><div class="dot" style="background:var(--a1)"></div>Claude AI</div>
-      <div class="src-badge"><div class="dot" style="background:var(--a2)"></div>Deep Reasoning</div>
-      <div class="src-badge"><div class="dot" style="background:var(--a4)"></div>Multi-source</div>
-    </div>
-    <div class="suggest-grid">
-      <div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🔬</div><div class="sc-text">What are the latest breakthroughs in AI research?</div></div>
-      <div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💡</div><div class="sc-text">Explain quantum computing like I'm 10 years old</div></div>
-      <div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💻</div><div class="sc-text">Write a Python script to scrape data from a website</div></div>
-      <div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🌍</div><div class="sc-text">What's happening in the world today?</div></div>
-    </div>`;
-  document.getElementById('chat-inner').appendChild(welcome);
-  document.getElementById('quick-suggestions').style.display = 'flex';
+  welcome.className = 'welcome'; welcome.id = 'welcome-screen';
+  welcome.innerHTML = '<div class="welcome-icon">✦</div><h1>Ask me anything.</h1><p>HK AI searches the web, reasons with advanced AI, and synthesizes the best answer from multiple sources — all in real time.</p><div class="source-badges"><div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div><div class="src-badge"><div class="dot" style="background:var(--a1)"></div>Claude AI</div><div class="src-badge"><div class="dot" style="background:var(--a2)"></div>Deep Reasoning</div><div class="src-badge"><div class="dot" style="background:var(--a4)"></div>Multi-source</div></div><div class="suggest-grid"><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🔬</div><div class="sc-text">What are the latest breakthroughs in AI research?</div></div><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💡</div><div class="sc-text">Explain quantum computing like I'm 10 years old</div></div><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💻</div><div class="sc-text">Write a Python script to scrape data from a website</div></div><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🌍</div><div class="sc-text">What's happening in the world today?</div></div></div>';
+  inner.appendChild(welcome);
+  const qs = document.getElementById('quick-suggestions');
+  if (qs) qs.style.display = 'flex';
   addToHistory('New Chat');
 }
 
@@ -1015,98 +970,145 @@ function addToHistory(text) {
   document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
   const item = document.createElement('div');
   item.className = 'chat-item active';
-  item.innerHTML = `<div class="ci-title">${text.substring(0,40)}${text.length>40?'…':''}</div><div class="ci-time">just now</div>`;
+  item.innerHTML = '<div class="ci-title">' + text.substring(0,40) + (text.length>40?'…':'') + '</div><div class="ci-time">just now</div>';
   list.insertBefore(item, list.firstChild);
 }
 
 // ===== TRIAL SYSTEM =====
-const TRIAL_DAYS = 7;
+const TRIAL_DAYS = 30;
 const MAX_UPLOADS = 10;
 
 function initTrial() {
-  // Set trial start if not set
   if (!localStorage.getItem('hkai_trial_start')) {
     localStorage.setItem('hkai_trial_start', Date.now().toString());
     localStorage.setItem('hkai_uploads', '0');
   }
-
   updateTrialBanner();
   updateUploadCounter();
-  setInterval(updateTrialBanner, 60000); // update every minute
+  setInterval(updateTrialBanner, 60000);
 }
 
 function updateTrialBanner() {
   const start = parseInt(localStorage.getItem('hkai_trial_start') || Date.now());
   const elapsed = Date.now() - start;
-  const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor(elapsed / (1000 * 60 * 60 * 24)));
-  const hoursLeft = Math.max(0, Math.floor((TRIAL_DAYS * 24) - elapsed / (1000 * 60 * 60)));
-  const minsLeft = Math.max(0, Math.floor(((TRIAL_DAYS * 24 * 60) - elapsed / (1000 * 60)) % 60));
+  const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor(elapsed / (1000*60*60*24)));
+  const totalMinsLeft = Math.max(0, Math.floor((TRIAL_DAYS*24*60) - elapsed/(1000*60)));
+  const hoursLeft = Math.floor(totalMinsLeft / 60) % 24;
+  const minsLeft = totalMinsLeft % 60;
 
-  document.getElementById('trial-days').textContent = daysLeft;
-
+  const daysEl = document.getElementById('trial-days');
   const countdownEl = document.getElementById('trial-countdown');
-  if (daysLeft > 0) {
-    countdownEl.textContent = `${daysLeft}d ${hoursLeft % 24}h ${minsLeft}m left`;
-  } else {
-    countdownEl.textContent = 'Trial expired!';
-    showUpgrade();
-  }
+  const banner = document.getElementById('trial-banner');
 
-  // Show banner
-  document.getElementById('trial-banner').classList.add('show');
-  // Push content down
-  document.querySelector('.app').style.marginTop = '36px';
+  if (daysEl) daysEl.textContent = daysLeft;
+  if (countdownEl) countdownEl.textContent = daysLeft > 0 ? daysLeft + 'd ' + hoursLeft + 'h ' + minsLeft + 'm left' : 'Trial expired!';
+  if (banner) { banner.classList.add('show'); document.querySelector('.app').style.marginTop = '36px'; }
+  if (daysLeft === 0) showUpgrade();
 }
 
 function updateUploadCounter() {
   const used = parseInt(localStorage.getItem('hkai_uploads') || '0');
-  const remaining = MAX_UPLOADS - used;
+  const remaining = Math.max(0, MAX_UPLOADS - used);
   const pct = (remaining / MAX_UPLOADS) * 100;
-
   const counter = document.getElementById('upload-counter');
   const countEl = document.getElementById('upload-count');
   const fillEl = document.getElementById('uc-fill');
-
   if (countEl) countEl.textContent = remaining;
   if (fillEl) fillEl.style.width = pct + '%';
-
   if (counter) {
-    counter.classList.remove('warning', 'danger');
+    counter.classList.remove('warning','danger');
     if (remaining <= 3 && remaining > 0) counter.classList.add('warning');
-    if (remaining <= 0) {
-      counter.classList.add('danger');
-      if (countEl) countEl.textContent = '0';
-    }
+    if (remaining <= 0) counter.classList.add('danger');
   }
 }
 
 function useUpload() {
   const used = parseInt(localStorage.getItem('hkai_uploads') || '0');
-  if (used >= MAX_UPLOADS) {
-    showUpgrade();
-    return false;
-  }
-  localStorage.setItem('hkai_uploads', (used + 1).toString());
+  if (used >= MAX_UPLOADS) { showUpgrade(); return false; }
+  localStorage.setItem('hkai_uploads', (used+1).toString());
   updateUploadCounter();
   return true;
 }
 
 // ===== UPGRADE MODAL =====
 function showUpgrade() {
-  document.getElementById('upgrade-overlay').classList.add('show');
+  const el = document.getElementById('upgrade-overlay');
+  if (el) el.classList.add('show');
 }
 function closeUpgrade() {
-  document.getElementById('upgrade-overlay').classList.remove('show');
+  const el = document.getElementById('upgrade-overlay');
+  if (el) el.classList.remove('show');
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUpgrade(); });
 
-// ===== PHOTO PAGE =====
+// ===== VIDEO TABS =====
+function switchVTab(el, tabId) {
+  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  ['vgen','vedit','vsamples'].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.style.display = id === tabId ? 'block' : 'none';
+  });
+}
+
+function generateVideo() {
+  const prompt = document.getElementById('v-prompt').value.trim();
+  if (!prompt) { showToast('Please describe your video first','⚠️'); return; }
+  if (!useUpload()) return;
+  const btn = document.getElementById('vgen-btn');
+  const preview = document.getElementById('video-preview');
+  const vpText = document.getElementById('vp-text');
+  const vpProgress = document.getElementById('vp-progress');
+  const vpFill = document.getElementById('vp-progress-fill');
+  btn.disabled = true; btn.textContent = '⏳ Generating...';
+  preview.classList.add('generating');
+  if (vpProgress) vpProgress.classList.add('show');
+  let progress = 0;
+  const interval = setInterval(() => {
+    progress += Math.random() * 12; if (progress > 95) progress = 95;
+    if (vpFill) vpFill.style.width = progress + '%';
+    if (vpText) vpText.textContent = progress < 30 ? '🧠 Understanding prompt...' : progress < 60 ? '🎨 Generating frames...' : progress < 85 ? '🎬 Compositing...' : '✨ Finishing...';
+  }, 400);
+  setTimeout(() => {
+    clearInterval(interval);
+    if (vpFill) vpFill.style.width = '100%';
+    preview.classList.remove('generating');
+    setTimeout(() => {
+      if (vpProgress) vpProgress.classList.remove('show');
+      preview.innerHTML = '<div style="font-size:40px">🎬</div><div style="font-size:12px;color:var(--a3);font-weight:600">✅ Video Ready!</div><div style="font-size:11px;color:var(--muted);max-width:200px;text-align:center;margin-top:4px">' + prompt.substring(0,60) + (prompt.length>60?'...':'') + '</div>';
+      btn.disabled = false; btn.innerHTML = '🎬 Generate Video';
+      showToast('Video generated!','🎬');
+    }, 500);
+  }, 5000);
+}
+
+function useVTemplate(prompt) {
+  const el = document.getElementById('v-prompt');
+  if (el) el.value = prompt;
+  showToast('Template loaded!','✦');
+}
+
+function triggerVideoUpload() {
+  if (!useUpload()) return;
+  document.getElementById('video-upload-input').click();
+}
+
+function handleVideoUpload(input) {
+  if (input.files && input.files[0]) { showToast('Video "' + input.files[0].name + '" uploaded!','🎥'); updateUploadCounter(); }
+}
+
+function applyEdit(tool) {
+  const msgs = {trim:'Trimming...',subtitle:'Adding subtitles...',filter:'Applying filters...',speed:'Adjusting speed...',music:'Adding music...',text:'Adding text...',crop:'Cropping...',rotate:'Rotating...','ai-enhance':'AI enhancing...'};
+  showToast(msgs[tool] || 'Processing...','✂️');
+}
+
+// ===== PHOTO TABS =====
 function switchPTab(el, tabId) {
   document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
   ['pgen','pedit','pgallery'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = id === tabId ? 'block' : 'none';
+    const e = document.getElementById(id);
+    if (e) e.style.display = id === tabId ? 'block' : 'none';
   });
 }
 
@@ -1120,79 +1122,48 @@ function selectAspect(el) {
   el.classList.add('active');
 }
 
-function generatePhoto() {
+async function generatePhoto() {
   const prompt = document.getElementById('p-prompt').value.trim();
-  if (!prompt) { showToast('Please describe your image first', '⚠️'); return; }
-
+  if (!prompt) { showToast('Please describe your image first','⚠️'); return; }
   if (!useUpload()) return;
-
   const btn = document.getElementById('pgen-btn');
   const preview = document.getElementById('photo-preview');
   const ppText = document.getElementById('pp-text');
   const ppProgress = document.getElementById('pp-progress');
   const ppFill = document.getElementById('pp-progress-fill');
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
+  btn.disabled = true; btn.textContent = '⏳ Generating...';
   preview.classList.add('generating');
-  ppProgress.classList.add('show');
-  ppText.textContent = 'AI is creating your image...';
-
-  const stages = ['🧠 Analyzing prompt...','🎨 Generating colors...','✏️ Rendering details...','✨ Adding finishing touches...'];
+  if (ppProgress) ppProgress.classList.add('show');
+  const stages = ['🧠 Analyzing prompt...','🎨 Generating colors...','✏️ Rendering details...','✨ Finishing touches...'];
   let progress = 0;
-  let stageIdx = 0;
-
   const interval = setInterval(() => {
-    progress += Math.random() * 15;
-    if (progress > 95) progress = 95;
-    ppFill.style.width = progress + '%';
-    stageIdx = Math.min(Math.floor(progress / 25), stages.length - 1);
-    ppText.textContent = stages[stageIdx];
+    progress += Math.random() * 15; if (progress > 95) progress = 95;
+    if (ppFill) ppFill.style.width = progress + '%';
+    if (ppText) ppText.textContent = stages[Math.min(Math.floor(progress/25), stages.length-1)];
   }, 350);
-
-  // Use Claude API to describe what the image would look like
   setTimeout(async () => {
     clearInterval(interval);
-    ppFill.style.width = '100%';
+    if (ppFill) ppFill.style.width = '100%';
     preview.classList.remove('generating');
-
     const style = document.querySelector('.style-opt.active')?.textContent?.trim() || 'Realistic';
-    const quality = document.getElementById('p-quality').value;
-
-    // Generate image description via Claude
+    const quality = document.getElementById('p-quality')?.value || 'HD';
     try {
-      const resp = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          messages: [{role:'user', content:`Describe in vivid detail what this AI-generated image looks like: "${prompt}" in ${style} style. Write 2-3 sentences describing the visual result as if it was successfully generated. Be specific about colors, composition, and mood.`}],
-          useWebSearch: false
-        })
-      });
+      const resp = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'Describe in 2-3 vivid sentences what this AI-generated image looks like: "' + prompt + '" in ' + style + ' style.'}],useWebSearch:false})});
       const data = await resp.json();
       const desc = data.text || 'Image generated successfully!';
-
-      preview.innerHTML = `
-        <div style="width:100%;height:100%;background:linear-gradient(135deg,rgba(108,142,255,0.15),rgba(167,139,250,0.15),rgba(52,211,153,0.1));border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;gap:10px">
-          <div style="font-size:40px">🖼️</div>
-          <div style="font-size:11px;color:var(--a3);font-weight:600">✅ Image Generated — ${style} • ${quality}</div>
-          <div style="font-size:11px;color:var(--muted);line-height:1.6;max-width:90%">${desc}</div>
-          <div style="padding:4px 12px;background:rgba(108,142,255,0.1);border:1px solid rgba(108,142,255,0.2);border-radius:20px;font-size:10px;color:var(--a1)">Click Save to download</div>
-        </div>`;
+      preview.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,rgba(108,142,255,0.15),rgba(167,139,250,0.15),rgba(52,211,153,0.1));border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;gap:10px"><div style="font-size:40px">🖼️</div><div style="font-size:11px;color:var(--a3);font-weight:600">✅ ' + style + ' • ' + quality + '</div><div style="font-size:11px;color:var(--muted);line-height:1.6;max-width:90%">' + escHtml(desc) + '</div></div>';
     } catch(e) {
-      preview.innerHTML = `<div style="font-size:36px">🖼️</div><div style="font-size:12px;color:var(--a3)">✅ Image Ready!</div>`;
+      preview.innerHTML = '<div style="font-size:36px">🖼️</div><div style="font-size:12px;color:var(--a3)">✅ Image Ready!</div>';
     }
-
-    btn.disabled = false;
-    btn.innerHTML = '✨ Generate Image';
-    showToast('Image generated!', '🖼️');
-    updateUploadCounter();
+    btn.disabled = false; btn.innerHTML = '✨ Generate Image';
+    showToast('Image generated!','🖼️');
   }, 4000);
 }
 
 function usePhotoPrompt(prompt) {
-  document.getElementById('p-prompt').value = prompt;
-  showToast('Prompt loaded! Click Generate ✨', '💡');
+  const el = document.getElementById('p-prompt');
+  if (el) el.value = prompt;
+  showToast('Prompt loaded! Click Generate ✨','💡');
 }
 
 function triggerPhotoUpload() {
@@ -1202,155 +1173,65 @@ function triggerPhotoUpload() {
 
 function handlePhotoUpload(input) {
   if (input.files && input.files[0]) {
-    const file = input.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
       const canvas = document.getElementById('edit-canvas');
-      canvas.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;border-radius:10px">`;
-      canvas.classList.add('has-image');
+      canvas.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:contain;border-radius:10px">';
       canvas.onclick = null;
-      showToast(`Photo "${file.name}" loaded!`, '📸');
+      showToast('Photo loaded!','📸');
       updateUploadCounter();
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(input.files[0]);
   }
 }
 
 function applyPhotoEdit(tool) {
-  const msgs = {
-    'bg-remove': 'Removing background...','upscale': 'Upscaling image to 4x...','colorize': 'Colorizing photo...',
-    'restore': 'Restoring and enhancing...','cartoon': 'Converting to cartoon style...','face-enhance': 'Enhancing facial features...',
-    'hdr': 'Applying HDR effect...','noise': 'Removing noise...','crop': 'Cropping image...','rotate': 'Rotating image...'
-  };
-  showToast(msgs[tool] || 'Processing...', '🎨');
+  const msgs = {'bg-remove':'Removing background...','upscale':'Upscaling 4x...','colorize':'Colorizing...','restore':'Restoring...','cartoon':'Cartoonifying...','face-enhance':'Enhancing faces...','hdr':'Applying HDR...','noise':'Denoising...','crop':'Cropping...','rotate':'Rotating...'};
+  showToast(msgs[tool] || 'Processing...','🎨');
 }
 
 function applyPhotoAI() {
-  const prompt = document.getElementById('p-edit-prompt').value.trim();
-  if (!prompt) { showToast('Please describe your edit first', '⚠️'); return; }
-  showToast('AI is editing your photo...', '✦');
-  setTimeout(() => showToast('Edit applied successfully!', '✅'), 2000);
+  const prompt = document.getElementById('p-edit-prompt')?.value.trim();
+  if (!prompt) { showToast('Describe your edit first','⚠️'); return; }
+  showToast('AI editing your photo...','✦');
+  setTimeout(() => showToast('Edit applied!','✅'), 2000);
 }
 
-// Override showPage for photo
-const _origShowPage = showPage;
-
-// ===== VIDEO PAGE =====
-function switchVTab(el, tabId) {
-  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  ['vgen','vedit','vsamples'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = id === tabId ? 'block' : 'none';
+// ===== ANALYTICS =====
+function buildBarChart() {
+  const chart = document.getElementById('bar-chart');
+  if (!chart || chart.children.length > 0) return;
+  const data = [{d:'Mon',v:62},{d:'Tue',v:84},{d:'Wed',v:71},{d:'Thu',v:95},{d:'Fri',v:88},{d:'Sat',v:43},{d:'Sun',v:29}];
+  const max = Math.max(...data.map(d => d.v));
+  data.forEach(item => {
+    const col = document.createElement('div'); col.className = 'bar-col';
+    col.innerHTML = '<div class="bar" style="height:' + ((item.v/max)*100) + 'px"></div><div class="bar-label">' + item.d + '</div>';
+    chart.appendChild(col);
   });
 }
 
-function generateVideo() {
-  const prompt = document.getElementById('v-prompt').value.trim();
-  if (!prompt) { showToast('Please describe your video first', '⚠️'); return; }
-
-  // Check upload/trial limits
-  if (!useUpload()) return;
-
-  const btn = document.getElementById('vgen-btn');
-  const preview = document.getElementById('video-preview');
-  const vpText = document.getElementById('vp-text');
-  const vpProgress = document.getElementById('vp-progress');
-  const vpFill = document.getElementById('vp-progress-fill');
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
-  preview.classList.add('generating');
-  vpProgress.classList.add('show');
-  vpText.textContent = 'AI is generating your video...';
-
-  // Simulate progress
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.random() * 12;
-    if (progress > 95) progress = 95;
-    vpFill.style.width = progress + '%';
-
-    if (progress < 30) vpText.textContent = '🧠 Understanding your prompt...';
-    else if (progress < 60) vpText.textContent = '🎨 Generating frames...';
-    else if (progress < 85) vpText.textContent = '🎬 Compositing video...';
-    else vpText.textContent = '✨ Finishing touches...';
-  }, 400);
-
-  setTimeout(() => {
-    clearInterval(interval);
-    vpFill.style.width = '100%';
-    preview.classList.remove('generating');
-
-    setTimeout(() => {
-      vpProgress.classList.remove('show');
-      preview.innerHTML = `
-        <div style="font-size:40px">🎬</div>
-        <div style="font-size:12px;color:var(--a3);font-weight:600">✅ Video Ready!</div>
-        <div style="font-size:11px;color:var(--muted);max-width:200px;text-align:center;margin-top:4px">${prompt.substring(0,60)}${prompt.length>60?'...':''}</div>
-        <div style="margin-top:8px;padding:4px 12px;background:rgba(108,142,255,0.1);border:1px solid rgba(108,142,255,0.2);border-radius:20px;font-size:10px;color:var(--a1)">▶ Preview Available</div>`;
-      btn.disabled = false;
-      btn.innerHTML = '🎬 Generate Video';
-      showToast('Video generated successfully!', '🎬');
-      updateUploadCounter();
-    }, 500);
-  }, 5000);
-}
-
-function useVTemplate(prompt) {
-  document.getElementById('v-prompt').value = prompt;
-  showToast('Template loaded!', '✦');
-}
-
-function triggerVideoUpload() {
-  if (!useUpload()) return;
-  document.getElementById('video-upload-input').click();
-}
-
-function handleVideoUpload(input) {
-  if (input.files && input.files[0]) {
-    showToast(`Video "${input.files[0].name}" uploaded!`, '🎥');
-    updateUploadCounter();
-  }
-}
-
-function applyEdit(tool) {
-  const labels = {
-    trim: 'Trimming video...', subtitle: 'Adding subtitles...', filter: 'Applying filters...',
-    speed: 'Adjusting speed...', music: 'Adding music...', text: 'Adding text overlay...',
-    crop: 'Cropping video...', 'ai-enhance': 'AI enhancing video...'
-  };
-  showToast(labels[tool] || 'Processing...', '✂️');
-}
-
-// Override file input tool to track uploads
-document.addEventListener('DOMContentLoaded', () => {
-  initTrial();
-
-  // Intercept file attach button
-  const attachBtn = document.querySelector('.input-tool[title="Attach file"]');
-  if (attachBtn) {
-    attachBtn.onclick = () => {
-      if (!useUpload()) return;
-      showToast('File attached (1 upload used)', '📎');
-    };
-  }
-});
-
 // ===== TOAST =====
 let toastTimer;
-function showToast(msg, icon = '✅') {
+function showToast(msg, icon) {
+  icon = icon || '✅';
   const t = document.getElementById('toast');
   t.className = 'toast show';
-  t.innerHTML = `<span>${icon}</span>${msg}`;
+  t.innerHTML = '<span>' + icon + '</span>' + msg;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  initTrial();
+  // Mark chat as active by default
+  document.querySelector('.sb-item')?.classList.add('active');
+});
 </script>
 
 <!-- TRIAL BANNER -->
 <div class="trial-banner" id="trial-banner">
-  <span>⚡ Free Trial — <span id="trial-days">7</span> days remaining</span>
+  <span>⚡ Free Trial — <span id="trial-days">30</span> days remaining</span>
   <div class="countdown" id="trial-countdown">Loading...</div>
   <div class="upgrade-link" onclick="showUpgrade()">Upgrade Now →</div>
 </div>
