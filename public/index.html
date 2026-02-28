@@ -365,10 +365,6 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
   <div class="main">
     <!-- TOPBAR -->
     <div class="topbar">
-      <div id="top-right-countdown" style="position: absolute; top: 10px; right: 20px; background: rgba(108, 142, 255, 0.15); border: 1px solid rgba(108, 142, 255, 0.3); color: var(--a1); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; z-index: 100; font-family: 'DM Mono', monospace; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(108, 142, 255, 0.1);">
-        <span style="width: 6px; height: 6px; background: var(--a1); border-radius: 50%; display: inline-block; animation: blink 2s infinite;"></span>
-        <span id="top-countdown-text">Loading...</span>
-      </div>
       <div class="model-selector" onclick="toggleModelDropdown()" id="model-selector">
         <div class="model-dot"></div>
         <span class="model-name" id="model-name">HK AI Pro</span>
@@ -755,10 +751,7 @@ function updateTrialBanner() {
   const countdownEl = document.getElementById('trial-countdown');
   const banner = document.getElementById('trial-banner');
   if (daysEl) daysEl.textContent = daysLeft;
-  const countdownText = daysLeft > 0 ? daysLeft + 'd ' + hoursLeft + 'h ' + minsLeft + 'm left' : 'Trial expired!';
-  if (countdownEl) countdownEl.textContent = countdownText;
-  const topCountdownTextEl = document.getElementById('top-countdown-text');
-  if (topCountdownTextEl) topCountdownTextEl.textContent = countdownText;
+  if (countdownEl) countdownEl.textContent = daysLeft > 0 ? daysLeft + 'd ' + hoursLeft + 'h ' + minsLeft + 'm left' : 'Trial expired!';
   if (banner) { banner.classList.add('show'); document.querySelector('.app').style.marginTop = '36px'; }
   if (daysLeft === 0) showUpgrade();
 }
@@ -1315,16 +1308,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- TRIAL BANNER -->
 <div class="trial-banner" id="trial-banner">
-  <span>⚡ Extended Free Trial — <span id="trial-days">60</span> days remaining (30 days free + 30 days extended)</span>
+  <span>⚡ Free Trial — <span id="trial-days">30</span> days remaining</span>
   <div class="countdown" id="trial-countdown">Loading...</div>
-  <div class="upgrade-link" onclick="showUpgrade()">Upgrade to Pro →</div>
+  <div class="upgrade-link" onclick="showUpgrade()">Upgrade Now →</div>
 </div>
 
 <!-- UPGRADE MODAL -->
 <div class="upgrade-overlay" id="upgrade-overlay">
   <div class="upgrade-modal">
     <div class="um-icon">🚀</div>
-    
     <h2>Upgrade HK AI</h2>
     <p id="upgrade-reason">You've reached your free plan limit. Upgrade to continue with unlimited chats, more uploads, video generation, and priority AI responses.</p>
     <div class="plans-grid">
@@ -1333,22 +1325,19 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="plan-price">$9<span>/mo</span></div>
         <ul class="plan-features">
           <li>Unlimited chats</li>
-          <li>10 file uploads/mo</li>
+          <li>50 file uploads/mo</li>
           <li>Web search</li>
-          <li>Image generation & editing</li>
-          <li>Video generation & editing</li>
+          <li>Video generation</li>
           <li>Priority support</li>
         </ul>
       </div>
       <div class="plan-card popular">
         <div class="plan-badge">⭐ Most Popular</div>
-        <div class="plan-name">Premium</div>
+        <div class="plan-name">Enterprise</div>
         <div class="plan-price">$29<span>/mo</span></div>
         <ul class="plan-features">
           <li>Everything in Pro</li>
           <li>Unlimited uploads</li>
-          <li>Advanced image editing tools</li>
-          <li>4K video generation</li>
           <li>Custom AI training</li>
           <li>API access</li>
           <li>Dedicated support</li>
