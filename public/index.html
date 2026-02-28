@@ -459,8 +459,6 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
         <div class="photo-layout">
           <div class="photo-tabs">
             <button class="ptab active" onclick="switchPTab(this,'pgen')">✨ Generate Image</button>
-            <button class="ptab" onclick="switchPTab(this,'pedit')">🎨 Edit Photo</button>
-            <button class="ptab" onclick="switchPTab(this,'pgallery')">🖼️ My Gallery</button>
           </div>
 
           <!-- GENERATE TAB -->
@@ -511,9 +509,8 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
                   <div style="font-size:12px;color:var(--muted)" id="pp-text">Your image will appear here</div>
                   <div class="vp-progress" id="pp-progress"><div class="vp-progress-fill" id="pp-progress-fill" style="width:0%"></div></div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                   <button class="gen-btn" style="padding:8px;font-size:11px" onclick="showToast('Image downloaded!','⬇️')">⬇️ Save</button>
-                  <button class="gen-btn" style="padding:8px;font-size:11px;background:linear-gradient(135deg,var(--a3),var(--a1))" onclick="switchPTab(document.querySelector('.ptab:nth-child(2)'),'pedit')">✏️ Edit</button>
                   <button class="gen-btn" style="padding:8px;font-size:11px;background:linear-gradient(135deg,var(--a2),var(--a4))" onclick="showToast('Shared!','🔗')">🔗 Share</button>
                 </div>
               </div>
@@ -535,70 +532,7 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
             </div>
           </div>
 
-          <!-- EDIT TAB -->
-          <div id="pedit" style="display:none">
-            <div class="photo-gen-grid">
-              <div class="pcard">
-                <div class="pcard-title">📂 Upload Photo</div>
-                <div class="edit-canvas" id="edit-canvas" onclick="triggerPhotoUpload()">
-                  <div style="font-size:32px">🖼️</div>
-                  <div style="font-size:13px;color:var(--muted)">Click to upload photo</div>
-                  <div style="font-size:11px;color:var(--muted2);margin-top:2px">JPG, PNG, WEBP up to 20MB</div>
-                </div>
-                <input type="file" id="photo-edit-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(this)">
 
-                <div class="tf-group">
-                  <label class="tf-label">AI Instructions</label>
-                  <textarea class="tf-textarea" id="p-edit-prompt" placeholder="Describe what you want to change... e.g. 'Remove background', 'Make it look cinematic', 'Change sky to sunset', 'Add dramatic lighting'"></textarea>
-                </div>
-                <button class="gen-btn" onclick="applyPhotoAI()">✦ Apply AI Edit</button>
-              </div>
-
-              <div class="pcard">
-                <div class="pcard-title">🎨 Adjustment Tools</div>
-                <div class="photo-edit-tools">
-                  <div class="pet-btn" onclick="applyPhotoEdit('bg-remove')"><span class="pet-icon">✂️</span><div class="pet-label">Remove BG</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('upscale')"><span class="pet-icon">🔍</span><div class="pet-label">Upscale</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('colorize')"><span class="pet-icon">🎨</span><div class="pet-label">Colorize</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('restore')"><span class="pet-icon">✨</span><div class="pet-label">Restore</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('cartoon')"><span class="pet-icon">🖌️</span><div class="pet-label">Cartoonify</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('face-enhance')"><span class="pet-icon">😊</span><div class="pet-label">Face Fix</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('hdr')"><span class="pet-icon">⚡</span><div class="pet-label">HDR</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('noise')"><span class="pet-icon">🧹</span><div class="pet-label">Denoise</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('crop')"><span class="pet-icon">📐</span><div class="pet-label">Crop</div></div>
-                  <div class="pet-btn" onclick="applyPhotoEdit('rotate')"><span class="pet-icon">🔄</span><div class="pet-label">Rotate</div></div>
-                </div>
-
-                <div class="tf-group"><label class="tf-label">Manual Adjustments</label></div>
-                <div class="slider-row"><span class="slider-label">Brightness</span><input type="range" class="slider-input" min="0" max="100" value="50" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">50</span></div>
-                <div class="slider-row"><span class="slider-label">Contrast</span><input type="range" class="slider-input" min="0" max="100" value="50" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">50</span></div>
-                <div class="slider-row"><span class="slider-label">Saturation</span><input type="range" class="slider-input" min="0" max="100" value="50" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">50</span></div>
-                <div class="slider-row"><span class="slider-label">Sharpness</span><input type="range" class="slider-input" min="0" max="100" value="50" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">50</span></div>
-                <div class="slider-row"><span class="slider-label">Warmth</span><input type="range" class="slider-input" min="0" max="100" value="50" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">50</span></div>
-
-                <button class="gen-btn" style="margin-top:8px" onclick="showToast('Photo saved!','✅')">💾 Save Edited Photo</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- GALLERY TAB -->
-          <div id="pgallery" style="display:none">
-            <div class="pcard">
-              <div class="pcard-title">🖼️ My Generated Images</div>
-              <div class="photo-grid" style="grid-template-columns:repeat(5,1fr)">
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🌅<div class="photo-item-label">Sunset Scene</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🦁<div class="photo-item-label">Wildlife</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🌆<div class="photo-item-label">City Night</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">👸<div class="photo-item-label">Portrait</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🏔️<div class="photo-item-label">Mountain</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🎨<div class="photo-item-label">Abstract</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🍽️<div class="photo-item-label">Food Art</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🏢<div class="photo-item-label">Interior</div></div>
-                <div class="photo-item" onclick="showToast('Opening image...','🖼️')">🌸<div class="photo-item-label">Floral</div></div>
-                <div class="photo-item" style="border-style:dashed;color:var(--muted)" onclick="switchPTab(document.querySelector('.ptab'),'pgen')">+<div class="photo-item-label">Generate</div></div>
-              </div>
-            </div>
-          </div>
 
         </div>
       </div>
@@ -1161,49 +1095,83 @@ function selectAspect(el) {
   el.classList.add('active');
 }
 
-function generatePhoto() {
+async function generatePhoto() {
   const promptEl = document.getElementById('p-prompt');
   const prompt = promptEl ? promptEl.value.trim() : '';
   if (!prompt) { showToast('Please describe your image first', 'warn'); return; }
-  if (!useUpload('image generation')) return;
   const btn = document.getElementById('pgen-btn');
   const preview = document.getElementById('photo-preview');
   const ppText = document.getElementById('pp-text');
   const ppProgress = document.getElementById('pp-progress');
   const ppFill = document.getElementById('pp-progress-fill');
-  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Generating...'; }
   if (preview) preview.classList.add('generating');
   if (ppProgress) ppProgress.classList.add('show');
-  const stages = ['Analyzing prompt...','Generating colors...','Rendering details...','Finishing touches...'];
   let progress = 0;
+  const stages = ['Enhancing prompt with AI...','Composing scene...','Rendering details...','Finishing touches...'];
   const interval = setInterval(function() {
-    progress += Math.random() * 15;
-    if (progress > 95) progress = 95;
+    progress += Math.random() * 12;
+    if (progress > 90) progress = 90;
     if (ppFill) ppFill.style.width = progress + '%';
-    if (ppText) ppText.textContent = stages[Math.min(Math.floor(progress/25), stages.length-1)];
-  }, 350);
-  setTimeout(function() {
+    if (ppText) ppText.textContent = stages[Math.min(Math.floor(progress / 25), stages.length - 1)];
+  }, 400);
+
+  try {
+    // Step 1: Use Claude to enhance the prompt
+    const styleEl = document.querySelector('.style-opt.active');
+    const style = styleEl ? styleEl.textContent.trim() : 'Realistic';
+    const negativeEl = document.getElementById('p-negative');
+    const negative = negativeEl ? negativeEl.value.trim() : '';
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
+        messages: [{ role: 'user', content: 'Rewrite this image prompt to be more detailed and vivid for an AI image generator. Style: ' + style + '. Keep it under 200 characters, no explanation, just the improved prompt.\n\nOriginal: ' + prompt }]
+      })
+    });
+    const claudeData = await claudeRes.json();
+    const enhancedPrompt = (claudeData.content && claudeData.content[0] && claudeData.content[0].text) || prompt;
+
+    // Step 2: Generate image via Pollinations.ai (free, no key needed)
+    const aspectEl = document.querySelector('.aspect-btn.active');
+    const aspect = aspectEl ? aspectEl.textContent.trim() : '1:1';
+    const dims = {'1:1':'512/512','16:9':'896/512','9:16':'512/896','4:3':'682/512','3:2':'768/512'};
+    const size = dims[aspect] || '512/512';
+    const encodedPrompt = encodeURIComponent(enhancedPrompt + (negative ? ' --no ' + negative : ''));
+    const imgUrl = 'https://image.pollinations.ai/prompt/' + encodedPrompt + '?width=' + size.split('/')[0] + '&height=' + size.split('/')[1] + '&nologo=true&seed=' + Date.now();
+
     clearInterval(interval);
     if (ppFill) ppFill.style.width = '100%';
-    if (preview) preview.classList.remove('generating');
+    if (ppText) ppText.textContent = 'Loading image...';
+
+    const img = new Image();
+    img.onload = function() {
+      if (preview) preview.innerHTML =
+        '<img src="' + imgUrl + '" style="width:100%;height:100%;object-fit:contain;border-radius:10px" alt="Generated image">' +
+        '<div style="position:absolute;bottom:8px;left:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:6px 10px;font-size:10px;color:rgba(255,255,255,0.8);backdrop-filter:blur(6px)">' + enhancedPrompt.substring(0,100) + (enhancedPrompt.length>100?'...':'') + '</div>';
+      if (preview) preview.style.position = 'relative';
+      if (ppProgress) ppProgress.classList.remove('show');
+      preview.classList.remove('generating');
+      if (btn) { btn.disabled = false; btn.innerHTML = '✨ Generate Image'; }
+      showToast('Image generated!', 'ok');
+    };
+    img.onerror = function() {
+      clearInterval(interval);
+      if (preview) { preview.classList.remove('generating'); preview.innerHTML = '<div style="font-size:36px">⚠️</div><div style="font-size:12px;color:var(--muted)">Generation failed. Try again.</div>'; }
+      if (ppProgress) ppProgress.classList.remove('show');
+      if (btn) { btn.disabled = false; btn.innerHTML = '✨ Generate Image'; }
+      showToast('Generation failed, please retry', 'error');
+    };
+    img.src = imgUrl;
+  } catch (err) {
+    clearInterval(interval);
+    if (preview) { preview.classList.remove('generating'); preview.innerHTML = '<div style="font-size:36px">⚠️</div><div style="font-size:12px;color:var(--muted)">Error: ' + err.message + '</div>'; }
     if (ppProgress) ppProgress.classList.remove('show');
-    const styleEl = document.querySelector('.style-opt.active');
-    const qualEl = document.getElementById('p-quality');
-    const style = styleEl ? styleEl.textContent.trim() : 'Realistic';
-    const quality = qualEl ? qualEl.value : 'HD';
-    // Generate a color palette based on prompt keywords for visual interest
-    const colors = generateColorsFromPrompt(prompt);
-    if (preview) preview.innerHTML =
-      '<div style="width:100%;height:100%;background:linear-gradient(135deg,' + colors[0] + ',' + colors[1] + ',' + colors[2] + ');border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;gap:8px">' +
-      '<div style="font-size:44px">' + getEmojiForPrompt(prompt) + '</div>' +
-      '<div style="font-size:12px;color:rgba(255,255,255,0.9);font-weight:700">Image Generated</div>' +
-      '<div style="font-size:10px;color:rgba(255,255,255,0.7)">' + style + ' · ' + quality + '</div>' +
-      '<div style="font-size:10px;color:rgba(255,255,255,0.6);max-width:90%;line-height:1.5;margin-top:4px">' + prompt.substring(0,70) + (prompt.length>70?'...':'') + '</div>' +
-      '<div style="margin-top:8px;padding:3px 12px;background:rgba(255,255,255,0.2);border-radius:20px;font-size:10px;color:white">' + (MAX_UPLOADS - getUploadsUsed()) + ' uploads remaining</div>' +
-      '</div>';
-    if (btn) { btn.disabled = false; btn.innerHTML = 'Generate Image'; }
-    showToast('Image generated!', 'ok');
-  }, 4000);
+    if (btn) { btn.disabled = false; btn.innerHTML = '✨ Generate Image'; }
+    showToast('Error: ' + err.message, 'error');
+  }
 }
 
 function generateColorsFromPrompt(prompt) {
