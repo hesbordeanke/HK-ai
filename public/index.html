@@ -365,6 +365,10 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
   <div class="main">
     <!-- TOPBAR -->
     <div class="topbar">
+      <div id="top-right-countdown" style="position: absolute; top: 10px; right: 20px; background: rgba(108, 142, 255, 0.15); border: 1px solid rgba(108, 142, 255, 0.3); color: var(--a1); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; z-index: 100; font-family: 'DM Mono', monospace; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(108, 142, 255, 0.1);">
+        <span style="width: 6px; height: 6px; background: var(--a1); border-radius: 50%; display: inline-block; animation: blink 2s infinite;"></span>
+        <span id="top-countdown-text">Loading...</span>
+      </div>
       <div class="model-selector" onclick="toggleModelDropdown()" id="model-selector">
         <div class="model-dot"></div>
         <span class="model-name" id="model-name">HK AI Pro</span>
@@ -723,11 +727,97 @@ let currentModel = 'HK AI Pro';
 let isLoading = false;
 let msgHistory = [];
 
+// ===== TRIAL & UPLOAD SYSTEM =====
+const TRIAL_DAYS = 30;
+const MAX_UPLOADS = 10;
+const MAX_CHATS = 999999; // unlimited
+
+function initTrial() {
+  if (!localStorage.getItem('hkai_trial_start')) {
+    localStorage.setItem('hkai_trial_start', Date.now().toString());
+  }
+  if (!localStorage.getItem('hkai_uploads')) {
+    localStorage.setItem('hkai_uploads', '0');
+  }
+  updateTrialBanner();
+  updateUploadCounter();
+  setInterval(updateTrialBanner, 60000);
+}
+
+function updateTrialBanner() {
+  const start = parseInt(localStorage.getItem('hkai_trial_start') || Date.now());
+  const elapsed = Date.now() - start;
+  const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor(elapsed / (1000*60*60*24)));
+  const totalMinsLeft = Math.max(0, Math.floor((TRIAL_DAYS*24*60) - elapsed/(1000*60)));
+  const hoursLeft = Math.floor(totalMinsLeft / 60) % 24;
+  const minsLeft = totalMinsLeft % 60;
+  const daysEl = document.getElementById('trial-days');
+  const countdownEl = document.getElementById('trial-countdown');
+  const banner = document.getElementById('trial-banner');
+  if (daysEl) daysEl.textContent = daysLeft;
+  const countdownText = daysLeft > 0 ? daysLeft + 'd ' + hoursLeft + 'h ' + minsLeft + 'm left' : 'Trial expired!';
+  if (countdownEl) countdownEl.textContent = countdownText;
+  const topCountdownTextEl = document.getElementById('top-countdown-text');
+  if (topCountdownTextEl) topCountdownTextEl.textContent = countdownText;
+  if (banner) { banner.classList.add('show'); document.querySelector('.app').style.marginTop = '36px'; }
+  if (daysLeft === 0) showUpgrade();
+}
+
+function getUploadsUsed() {
+  return parseInt(localStorage.getItem('hkai_uploads') || '0');
+}
+
+function updateUploadCounter() {
+  const used = getUploadsUsed();
+  const remaining = Math.max(0, MAX_UPLOADS - used);
+  const pct = (remaining / MAX_UPLOADS) * 100;
+  const counter = document.getElementById('upload-counter');
+  const countEl = document.getElementById('upload-count');
+  const fillEl = document.getElementById('uc-fill');
+  if (countEl) countEl.textContent = remaining;
+  if (fillEl) fillEl.style.width = pct + '%';
+  if (counter) {
+    counter.classList.remove('warning','danger');
+    if (remaining <= 3 && remaining > 0) counter.classList.add('warning');
+    if (remaining <= 0) counter.classList.add('danger');
+  }
+}
+
+function useUpload(label) {
+  const used = getUploadsUsed();
+  if (used >= MAX_UPLOADS) {
+    showUpgrade('uploads');
+    return false;
+  }
+  localStorage.setItem('hkai_uploads', (used + 1).toString());
+  updateUploadCounter();
+  const remaining = MAX_UPLOADS - used - 1;
+  if (remaining <= 3 && remaining > 0) showToast(remaining + ' uploads remaining on free plan', 'warning');
+  return true;
+}
+
+// ===== UPGRADE MODAL =====
+function showUpgrade(reason) {
+  const el = document.getElementById('upgrade-overlay');
+  if (el) el.classList.add('show');
+  const subtitle = document.getElementById('upgrade-reason');
+  if (subtitle) {
+    if (reason === 'uploads') subtitle.textContent = 'You have used all 10 free file uploads. Upgrade for 50+ uploads per month.';
+    else if (reason === 'trial') subtitle.textContent = 'Your 30-day free trial has ended. Upgrade to keep using HK AI.';
+    else subtitle.textContent = 'Upgrade to continue with unlimited chats, more uploads, video generation, and priority AI responses.';
+  }
+}
+function closeUpgrade() {
+  const el = document.getElementById('upgrade-overlay');
+  if (el) el.classList.remove('show');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUpgrade(); });
+
 // ===== SIDEBAR =====
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
-  document.querySelector('.sb-toggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+  document.querySelector('.sb-toggle').textContent = sb.classList.contains('collapsed') ? '>' : '<';
 }
 
 // ===== NAVIGATION =====
@@ -735,20 +825,17 @@ function showPage(id, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const page = document.getElementById('page-' + id);
   if (page) page.classList.add('active');
-
   document.querySelectorAll('.sb-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   else {
     document.querySelectorAll('.sb-item').forEach(n => {
-      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) n.classList.add('active');
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').indexOf("'" + id + "'") > -1) n.classList.add('active');
     });
   }
-
-  const titles = {chat:'Chat', capabilities:'Capabilities', tasks:'Tasks', generate:'Generate',
-    video:'Video AI', photo:'Photo AI', integrations:'Integrations', analytics:'Analytics', settings:'Settings'};
+  const titles = {chat:'Chat',capabilities:'Capabilities',tasks:'Tasks',generate:'Generate',
+    video:'Video AI',photo:'Photo AI',integrations:'Integrations',analytics:'Analytics',settings:'Settings'};
   const titleEl = document.getElementById('page-title');
   if (titleEl) titleEl.textContent = titles[id] || id;
-
   if (id === 'analytics') buildBarChart();
 }
 
@@ -762,7 +849,7 @@ function setModel(name, el) {
   document.querySelectorAll('.model-opt').forEach(o => o.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('model-dropdown').classList.remove('open');
-  showToast('Switched to ' + name, '✦');
+  showToast('Switched to ' + name, 'star');
   event.stopPropagation();
 }
 document.addEventListener('click', e => {
@@ -779,7 +866,7 @@ function toggleSource(src) {
   if (pill) pill.classList.toggle('off', !sources[src]);
 }
 
-// ===== CHAT =====
+// ===== CHAT (unlimited) =====
 function hideWelcome() {
   const w = document.getElementById('welcome-screen');
   if (w) w.style.display = 'none';
@@ -795,15 +882,16 @@ function usePrompt(el) {
 
 function useChip(el) {
   const map = {
-    '🌐 Latest news': 'What is the latest news happening around the world today?',
-    '💻 Write code': 'Write me a useful code snippet. What language and task would you suggest?',
-    '📊 Analyze data': 'Help me understand how to analyze data effectively.',
-    '🔬 Research topic': 'Research a fascinating topic and give me a detailed summary.',
-    '✍️ Write for me': 'Write a compelling piece of content. What topic?',
-    '🧮 Calculate': 'Help me with a calculation or math problem.'
+    'Latest news': 'What is the latest news happening around the world today?',
+    'Write code': 'Write me a useful code snippet.',
+    'Analyze data': 'Help me understand how to analyze data effectively.',
+    'Research topic': 'Research a fascinating topic and give me a detailed summary.',
+    'Write for me': 'Write a compelling piece of content.',
+    'Calculate': 'Help me with a math problem.'
   };
+  const key = el.textContent.trim().replace(/^[^\s]+\s/, '');
   const input = document.getElementById('msg-input');
-  if (input) { input.value = map[el.textContent.trim()] || el.textContent; input.focus(); }
+  if (input) { input.value = map[key] || el.textContent.trim(); input.focus(); }
 }
 
 function handleKey(e) {
@@ -819,44 +907,34 @@ async function sendMessage() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text || isLoading) return;
-
   isLoading = true;
   document.getElementById('send-btn').disabled = true;
   hideWelcome();
-
   appendUserMsg(text);
   input.value = '';
   input.style.height = 'auto';
-  msgHistory.push({ role: 'user', content: text });
+  msgHistory.push({role: 'user', content: text});
   addToHistory(text);
-
   let searchEl = null;
   if (sources.web) searchEl = showSearchIndicator();
   const typingId = showTyping();
-
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: msgHistory, useWebSearch: sources.web })
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({messages: msgHistory, useWebSearch: sources.web})
     });
     const data = await response.json();
     let fullText = data.text || data.error || 'No response received.';
-    if (!response.ok) fullText = '⚠️ Error: ' + (data.error || 'Something went wrong.');
-
     removeElement(typingId);
     if (searchEl) removeElement(searchEl);
-
-    msgHistory.push({ role: 'assistant', content: fullText });
+    msgHistory.push({role: 'assistant', content: fullText});
     appendAIMsg(fullText);
   } catch (err) {
     removeElement(typingId);
     if (searchEl) removeElement(searchEl);
-    appendAIMsg('⚠️ **Connection error.** Could not reach HK AI servers.
-
-_Error: ' + err.message + '_');
+    appendAIMsg('Connection error. Please try again. ' + err.message);
   }
-
   isLoading = false;
   document.getElementById('send-btn').disabled = false;
 }
@@ -874,13 +952,13 @@ function appendAIMsg(text) {
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div');
   div.className = 'msg';
-  const activeSources = Object.entries(sources).filter(([,v])=>v).map(([k])=>k);
-  const srcTagsHtml = activeSources.map(s => {
-    const map = {web:['🌐','web','Web Search'],claude:['✦','claude','Claude AI'],deep:['🔬','deep','Deep Research']};
-    const [icon, cls, label] = map[s] || ['•','claude',s];
-    return '<span class="src-tag ' + cls + '">' + icon + ' ' + label + '</span>';
+  const activeSources = Object.entries(sources).filter(function(kv){return kv[1];}).map(function(kv){return kv[0];});
+  const srcTagsHtml = activeSources.map(function(s) {
+    const map = {web:['web-icon','web','Web Search'],claude:['star','claude','Claude AI'],deep:['scope','deep','Deep Research']};
+    const info = map[s] || ['dot','claude',s];
+    return '<span class="src-tag ' + info[1] + '">' + info[2] + '</span>';
   }).join('');
-  div.innerHTML = '<div class="msg-av ai">✦</div><div class="msg-content"><div class="source-tags">' + srcTagsHtml + '</div><div class="msg-bubble ai">' + formatMsg(text) + '</div><div class="msg-actions"><button class="act-btn" onclick="copyMsg(this)">📋 Copy</button><button class="act-btn" onclick="regenMsg()">↺ Retry</button></div></div>';
+  div.innerHTML = '<div class="msg-av ai">HK</div><div class="msg-content"><div class="source-tags">' + srcTagsHtml + '</div><div class="msg-bubble ai">' + formatMsg(text) + '</div><div class="msg-actions"><button class="act-btn" onclick="copyMsg(this)">Copy</button><button class="act-btn" onclick="regenMsg()">Retry</button></div></div>';
   inner.appendChild(div);
   scrollToBottom();
 }
@@ -890,7 +968,7 @@ function showTyping() {
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div');
   div.className = 'msg'; div.id = id;
-  div.innerHTML = '<div class="msg-av ai">✦</div><div class="msg-content"><div class="typing-bubble"><div class="typing-dots"><span></span><span></span><span></span></div><div class="typing-label">HK AI is thinking...</div></div></div>';
+  div.innerHTML = '<div class="msg-av ai">HK</div><div class="msg-content"><div class="typing-bubble"><div class="typing-dots"><span></span><span></span><span></span></div><div class="typing-label">HK AI is thinking...</div></div></div>';
   inner.appendChild(div);
   scrollToBottom();
   return id;
@@ -900,7 +978,7 @@ function showSearchIndicator() {
   const id = 'search-' + Date.now();
   const inner = document.getElementById('chat-inner');
   const div = document.createElement('div'); div.id = id;
-  div.innerHTML = '<div class="search-indicator"><div class="search-spin"></div>Searching the web for latest information...</div>';
+  div.innerHTML = '<div class="search-indicator"><div class="search-spin"></div>Searching the web...</div>';
   inner.appendChild(div);
   scrollToBottom();
   return id;
@@ -915,27 +993,22 @@ function formatMsg(text) {
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*(.*?)\*/g,'<em>$1</em>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
-    .replace(/```(\w*)
-([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
     .replace(/^### (.*$)/gm,'<strong style="font-size:14px;color:var(--a1)">$1</strong>')
     .replace(/^## (.*$)/gm,'<strong style="font-size:15px">$1</strong>')
     .replace(/^# (.*$)/gm,'<strong style="font-size:16px">$1</strong>')
     .replace(/^\- (.*$)/gm,'<li>$1</li>')
     .replace(/^(\d+)\. (.*$)/gm,'<li>$2</li>')
-    .replace(/(<li>.*<\/li>
-?)+/g, s => '<ul>' + s + '</ul>')
-    .replace(/
-/g,'<br>');
+    .replace(/(<li>[^<]*<\/li>)+/g, function(s){return '<ul>' + s + '</ul>';})
+    .replace(/\n/g,'<br>');
 }
 
 function escHtml(t) {
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/
-/g,'<br>');
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
 }
 
 function copyMsg(btn) {
   const bubble = btn.closest('.msg-content').querySelector('.msg-bubble');
-  navigator.clipboard.writeText(bubble.innerText).then(() => showToast('Copied!','✅'));
+  navigator.clipboard.writeText(bubble.innerText).then(function(){ showToast('Copied!', 'ok'); });
 }
 
 function regenMsg() {
@@ -945,7 +1018,8 @@ function regenMsg() {
     if (lastUser && lastUser.role === 'user') {
       msgHistory.pop();
       const msgs = document.querySelectorAll('.msg');
-      [msgs[msgs.length-1], msgs[msgs.length-2]].forEach(m => { if(m) m.remove(); });
+      if (msgs[msgs.length-1]) msgs[msgs.length-1].remove();
+      if (msgs[msgs.length-2]) msgs[msgs.length-2].remove();
       document.getElementById('msg-input').value = lastUser.content;
       sendMessage();
     }
@@ -955,11 +1029,21 @@ function regenMsg() {
 function newChat() {
   msgHistory = [];
   const inner = document.getElementById('chat-inner');
-  inner.innerHTML = '';
-  const welcome = document.createElement('div');
-  welcome.className = 'welcome'; welcome.id = 'welcome-screen';
-  welcome.innerHTML = '<div class="welcome-icon">✦</div><h1>Ask me anything.</h1><p>HK AI searches the web, reasons with advanced AI, and synthesizes the best answer from multiple sources — all in real time.</p><div class="source-badges"><div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div><div class="src-badge"><div class="dot" style="background:var(--a1)"></div>Claude AI</div><div class="src-badge"><div class="dot" style="background:var(--a2)"></div>Deep Reasoning</div><div class="src-badge"><div class="dot" style="background:var(--a4)"></div>Multi-source</div></div><div class="suggest-grid"><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🔬</div><div class="sc-text">What are the latest breakthroughs in AI research?</div></div><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💡</div><div class="sc-text">Explain quantum computing like I'm 10 years old</div></div><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💻</div><div class="sc-text">Write a Python script to scrape data from a website</div></div><div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🌍</div><div class="sc-text">What's happening in the world today?</div></div></div>';
-  inner.appendChild(welcome);
+  inner.innerHTML = '<div class="welcome" id="welcome-screen">' +
+    '<div class="welcome-icon">HK</div>' +
+    '<h1>Ask me anything.</h1>' +
+    '<p>HK AI searches the web and reasons with advanced AI to give you the best answers in real time.</p>' +
+    '<div class="source-badges">' +
+    '<div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div>' +
+    '<div class="src-badge"><div class="dot" style="background:var(--a1)"></div>Claude AI</div>' +
+    '<div class="src-badge"><div class="dot" style="background:var(--a2)"></div>Deep Reasoning</div>' +
+    '</div>' +
+    '<div class="suggest-grid">' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🔬</div><div class="sc-text">Latest breakthroughs in AI research?</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💡</div><div class="sc-text">Explain quantum computing simply</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💻</div><div class="sc-text">Write a Python web scraper</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🌍</div><div class="sc-text">What is happening in the world today?</div></div>' +
+    '</div></div>';
   const qs = document.getElementById('quick-suggestions');
   if (qs) qs.style.display = 'flex';
   addToHistory('New Chat');
@@ -967,234 +1051,224 @@ function newChat() {
 
 function addToHistory(text) {
   const list = document.getElementById('chat-list');
-  document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
+  if (!list) return;
+  document.querySelectorAll('.chat-item').forEach(function(i){ i.classList.remove('active'); });
   const item = document.createElement('div');
   item.className = 'chat-item active';
-  item.innerHTML = '<div class="ci-title">' + text.substring(0,40) + (text.length>40?'…':'') + '</div><div class="ci-time">just now</div>';
+  const t = text.substring(0,40) + (text.length > 40 ? '...' : '');
+  item.innerHTML = '<div class="ci-title">' + t + '</div><div class="ci-time">just now</div>';
   list.insertBefore(item, list.firstChild);
 }
 
-// ===== TRIAL SYSTEM =====
-const TRIAL_DAYS = 30;
-const MAX_UPLOADS = 10;
-
-function initTrial() {
-  if (!localStorage.getItem('hkai_trial_start')) {
-    localStorage.setItem('hkai_trial_start', Date.now().toString());
-    localStorage.setItem('hkai_uploads', '0');
-  }
-  updateTrialBanner();
-  updateUploadCounter();
-  setInterval(updateTrialBanner, 60000);
-}
-
-function updateTrialBanner() {
-  const start = parseInt(localStorage.getItem('hkai_trial_start') || Date.now());
-  const elapsed = Date.now() - start;
-  const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor(elapsed / (1000*60*60*24)));
-  const totalMinsLeft = Math.max(0, Math.floor((TRIAL_DAYS*24*60) - elapsed/(1000*60)));
-  const hoursLeft = Math.floor(totalMinsLeft / 60) % 24;
-  const minsLeft = totalMinsLeft % 60;
-
-  const daysEl = document.getElementById('trial-days');
-  const countdownEl = document.getElementById('trial-countdown');
-  const banner = document.getElementById('trial-banner');
-
-  if (daysEl) daysEl.textContent = daysLeft;
-  if (countdownEl) countdownEl.textContent = daysLeft > 0 ? daysLeft + 'd ' + hoursLeft + 'h ' + minsLeft + 'm left' : 'Trial expired!';
-  if (banner) { banner.classList.add('show'); document.querySelector('.app').style.marginTop = '36px'; }
-  if (daysLeft === 0) showUpgrade();
-}
-
-function updateUploadCounter() {
-  const used = parseInt(localStorage.getItem('hkai_uploads') || '0');
-  const remaining = Math.max(0, MAX_UPLOADS - used);
-  const pct = (remaining / MAX_UPLOADS) * 100;
-  const counter = document.getElementById('upload-counter');
-  const countEl = document.getElementById('upload-count');
-  const fillEl = document.getElementById('uc-fill');
-  if (countEl) countEl.textContent = remaining;
-  if (fillEl) fillEl.style.width = pct + '%';
-  if (counter) {
-    counter.classList.remove('warning','danger');
-    if (remaining <= 3 && remaining > 0) counter.classList.add('warning');
-    if (remaining <= 0) counter.classList.add('danger');
-  }
-}
-
-function useUpload() {
-  const used = parseInt(localStorage.getItem('hkai_uploads') || '0');
-  if (used >= MAX_UPLOADS) { showUpgrade(); return false; }
-  localStorage.setItem('hkai_uploads', (used+1).toString());
-  updateUploadCounter();
-  return true;
-}
-
-// ===== UPGRADE MODAL =====
-function showUpgrade() {
-  const el = document.getElementById('upgrade-overlay');
-  if (el) el.classList.add('show');
-}
-function closeUpgrade() {
-  const el = document.getElementById('upgrade-overlay');
-  if (el) el.classList.remove('show');
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUpgrade(); });
-
-// ===== VIDEO TABS =====
+// ===== VIDEO GENERATION (no API — simulated with rich output) =====
 function switchVTab(el, tabId) {
-  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.vtab').forEach(function(t){ t.classList.remove('active'); });
   if (el) el.classList.add('active');
-  ['vgen','vedit','vsamples'].forEach(id => {
+  ['vgen','vedit','vsamples'].forEach(function(id) {
     const e = document.getElementById(id);
     if (e) e.style.display = id === tabId ? 'block' : 'none';
   });
 }
 
 function generateVideo() {
-  const prompt = document.getElementById('v-prompt').value.trim();
-  if (!prompt) { showToast('Please describe your video first','⚠️'); return; }
-  if (!useUpload()) return;
+  const promptEl = document.getElementById('v-prompt');
+  const prompt = promptEl ? promptEl.value.trim() : '';
+  if (!prompt) { showToast('Please describe your video first', 'warn'); return; }
+  if (!useUpload('video generation')) return;
   const btn = document.getElementById('vgen-btn');
   const preview = document.getElementById('video-preview');
   const vpText = document.getElementById('vp-text');
   const vpProgress = document.getElementById('vp-progress');
   const vpFill = document.getElementById('vp-progress-fill');
-  btn.disabled = true; btn.textContent = '⏳ Generating...';
-  preview.classList.add('generating');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  if (preview) preview.classList.add('generating');
   if (vpProgress) vpProgress.classList.add('show');
   let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.random() * 12; if (progress > 95) progress = 95;
+  const interval = setInterval(function() {
+    progress += Math.random() * 12;
+    if (progress > 95) progress = 95;
     if (vpFill) vpFill.style.width = progress + '%';
-    if (vpText) vpText.textContent = progress < 30 ? '🧠 Understanding prompt...' : progress < 60 ? '🎨 Generating frames...' : progress < 85 ? '🎬 Compositing...' : '✨ Finishing...';
+    if (vpText) {
+      if (progress < 25) vpText.textContent = 'Analyzing prompt...';
+      else if (progress < 50) vpText.textContent = 'Generating frames...';
+      else if (progress < 75) vpText.textContent = 'Compositing video...';
+      else vpText.textContent = 'Finishing touches...';
+    }
   }, 400);
-  setTimeout(() => {
+  setTimeout(function() {
     clearInterval(interval);
     if (vpFill) vpFill.style.width = '100%';
-    preview.classList.remove('generating');
-    setTimeout(() => {
-      if (vpProgress) vpProgress.classList.remove('show');
-      preview.innerHTML = '<div style="font-size:40px">🎬</div><div style="font-size:12px;color:var(--a3);font-weight:600">✅ Video Ready!</div><div style="font-size:11px;color:var(--muted);max-width:200px;text-align:center;margin-top:4px">' + prompt.substring(0,60) + (prompt.length>60?'...':'') + '</div>';
-      btn.disabled = false; btn.innerHTML = '🎬 Generate Video';
-      showToast('Video generated!','🎬');
-    }, 500);
+    if (preview) preview.classList.remove('generating');
+    if (vpProgress) vpProgress.classList.remove('show');
+    const styleEl = document.getElementById('v-style');
+    const durEl = document.getElementById('v-duration');
+    const style = styleEl ? styleEl.value : 'Cinematic';
+    const dur = durEl ? durEl.value : '5 seconds';
+    if (preview) preview.innerHTML =
+      '<div style="font-size:40px;margin-bottom:8px">🎬</div>' +
+      '<div style="font-size:13px;color:var(--a3);font-weight:700;margin-bottom:6px">Video Ready!</div>' +
+      '<div style="font-size:11px;color:var(--a1);margin-bottom:4px">' + style + ' · ' + dur + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);max-width:220px;text-align:center;line-height:1.5">' + prompt.substring(0,80) + (prompt.length>80?'...':'') + '</div>' +
+      '<div style="margin-top:12px;padding:4px 14px;background:rgba(108,142,255,0.12);border:1px solid rgba(108,142,255,0.25);border-radius:20px;font-size:11px;color:var(--a1)">Preview Available</div>';
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Generate Video'; }
+    showToast('Video generated! ' + (MAX_UPLOADS - getUploadsUsed()) + ' uploads left', 'ok');
   }, 5000);
 }
 
 function useVTemplate(prompt) {
   const el = document.getElementById('v-prompt');
-  if (el) el.value = prompt;
-  showToast('Template loaded!','✦');
+  if (el) { el.value = prompt; el.focus(); }
+  showToast('Template loaded', 'ok');
 }
 
 function triggerVideoUpload() {
-  if (!useUpload()) return;
-  document.getElementById('video-upload-input').click();
+  if (!useUpload('video upload')) return;
+  const inp = document.getElementById('video-upload-input');
+  if (inp) inp.click();
 }
 
 function handleVideoUpload(input) {
-  if (input.files && input.files[0]) { showToast('Video "' + input.files[0].name + '" uploaded!','🎥'); updateUploadCounter(); }
+  if (input.files && input.files[0]) {
+    showToast('Video loaded: ' + input.files[0].name, 'ok');
+  }
 }
 
 function applyEdit(tool) {
-  const msgs = {trim:'Trimming...',subtitle:'Adding subtitles...',filter:'Applying filters...',speed:'Adjusting speed...',music:'Adding music...',text:'Adding text...',crop:'Cropping...',rotate:'Rotating...','ai-enhance':'AI enhancing...'};
-  showToast(msgs[tool] || 'Processing...','✂️');
+  const msgs = {trim:'Trimming video...',subtitle:'Adding subtitles...',filter:'Applying filter...',
+    speed:'Adjusting speed...',music:'Adding music...',text:'Adding text overlay...',
+    crop:'Cropping...',rotate:'Rotating...','ai-enhance':'AI enhancing...'};
+  showToast(msgs[tool] || 'Processing...', 'ok');
 }
 
-// ===== PHOTO TABS =====
+// ===== PHOTO GENERATION (no API — simulated) =====
 function switchPTab(el, tabId) {
-  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(function(t){ t.classList.remove('active'); });
   if (el) el.classList.add('active');
-  ['pgen','pedit','pgallery'].forEach(id => {
+  ['pgen','pedit','pgallery'].forEach(function(id) {
     const e = document.getElementById(id);
     if (e) e.style.display = id === tabId ? 'block' : 'none';
   });
 }
 
 function selectStyle(el) {
-  document.querySelectorAll('.style-opt').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.style-opt').forEach(function(s){ s.classList.remove('active'); });
   el.classList.add('active');
 }
 
 function selectAspect(el) {
-  document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.aspect-btn').forEach(function(b){ b.classList.remove('active'); });
   el.classList.add('active');
 }
 
-async function generatePhoto() {
-  const prompt = document.getElementById('p-prompt').value.trim();
-  if (!prompt) { showToast('Please describe your image first','⚠️'); return; }
-  if (!useUpload()) return;
+function generatePhoto() {
+  const promptEl = document.getElementById('p-prompt');
+  const prompt = promptEl ? promptEl.value.trim() : '';
+  if (!prompt) { showToast('Please describe your image first', 'warn'); return; }
+  if (!useUpload('image generation')) return;
   const btn = document.getElementById('pgen-btn');
   const preview = document.getElementById('photo-preview');
   const ppText = document.getElementById('pp-text');
   const ppProgress = document.getElementById('pp-progress');
   const ppFill = document.getElementById('pp-progress-fill');
-  btn.disabled = true; btn.textContent = '⏳ Generating...';
-  preview.classList.add('generating');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  if (preview) preview.classList.add('generating');
   if (ppProgress) ppProgress.classList.add('show');
-  const stages = ['🧠 Analyzing prompt...','🎨 Generating colors...','✏️ Rendering details...','✨ Finishing touches...'];
+  const stages = ['Analyzing prompt...','Generating colors...','Rendering details...','Finishing touches...'];
   let progress = 0;
-  const interval = setInterval(() => {
-    progress += Math.random() * 15; if (progress > 95) progress = 95;
+  const interval = setInterval(function() {
+    progress += Math.random() * 15;
+    if (progress > 95) progress = 95;
     if (ppFill) ppFill.style.width = progress + '%';
     if (ppText) ppText.textContent = stages[Math.min(Math.floor(progress/25), stages.length-1)];
   }, 350);
-  setTimeout(async () => {
+  setTimeout(function() {
     clearInterval(interval);
     if (ppFill) ppFill.style.width = '100%';
-    preview.classList.remove('generating');
-    const style = document.querySelector('.style-opt.active')?.textContent?.trim() || 'Realistic';
-    const quality = document.getElementById('p-quality')?.value || 'HD';
-    try {
-      const resp = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'Describe in 2-3 vivid sentences what this AI-generated image looks like: "' + prompt + '" in ' + style + ' style.'}],useWebSearch:false})});
-      const data = await resp.json();
-      const desc = data.text || 'Image generated successfully!';
-      preview.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,rgba(108,142,255,0.15),rgba(167,139,250,0.15),rgba(52,211,153,0.1));border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;gap:10px"><div style="font-size:40px">🖼️</div><div style="font-size:11px;color:var(--a3);font-weight:600">✅ ' + style + ' • ' + quality + '</div><div style="font-size:11px;color:var(--muted);line-height:1.6;max-width:90%">' + escHtml(desc) + '</div></div>';
-    } catch(e) {
-      preview.innerHTML = '<div style="font-size:36px">🖼️</div><div style="font-size:12px;color:var(--a3)">✅ Image Ready!</div>';
-    }
-    btn.disabled = false; btn.innerHTML = '✨ Generate Image';
-    showToast('Image generated!','🖼️');
+    if (preview) preview.classList.remove('generating');
+    if (ppProgress) ppProgress.classList.remove('show');
+    const styleEl = document.querySelector('.style-opt.active');
+    const qualEl = document.getElementById('p-quality');
+    const style = styleEl ? styleEl.textContent.trim() : 'Realistic';
+    const quality = qualEl ? qualEl.value : 'HD';
+    // Generate a color palette based on prompt keywords for visual interest
+    const colors = generateColorsFromPrompt(prompt);
+    if (preview) preview.innerHTML =
+      '<div style="width:100%;height:100%;background:linear-gradient(135deg,' + colors[0] + ',' + colors[1] + ',' + colors[2] + ');border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;gap:8px">' +
+      '<div style="font-size:44px">' + getEmojiForPrompt(prompt) + '</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.9);font-weight:700">Image Generated</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.7)">' + style + ' · ' + quality + '</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.6);max-width:90%;line-height:1.5;margin-top:4px">' + prompt.substring(0,70) + (prompt.length>70?'...':'') + '</div>' +
+      '<div style="margin-top:8px;padding:3px 12px;background:rgba(255,255,255,0.2);border-radius:20px;font-size:10px;color:white">' + (MAX_UPLOADS - getUploadsUsed()) + ' uploads remaining</div>' +
+      '</div>';
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Generate Image'; }
+    showToast('Image generated!', 'ok');
   }, 4000);
+}
+
+function generateColorsFromPrompt(prompt) {
+  const p = prompt.toLowerCase();
+  if (p.indexOf('sunset') > -1 || p.indexOf('fire') > -1) return ['#ff6b35','#f7931e','#8b1a1a'];
+  if (p.indexOf('ocean') > -1 || p.indexOf('sea') > -1 || p.indexOf('water') > -1) return ['#006994','#0099cc','#00d4ff'];
+  if (p.indexOf('forest') > -1 || p.indexOf('nature') > -1 || p.indexOf('green') > -1) return ['#1a4731','#2d7a4f','#52b788'];
+  if (p.indexOf('night') > -1 || p.indexOf('space') > -1 || p.indexOf('galaxy') > -1) return ['#03040a','#1a1a4e','#4a0080'];
+  if (p.indexOf('city') > -1 || p.indexOf('urban') > -1) return ['#1a1a2e','#16213e','#0f3460'];
+  if (p.indexOf('flower') > -1 || p.indexOf('pink') > -1 || p.indexOf('rose') > -1) return ['#ff6b9d','#c9184a','#ff8fa3'];
+  if (p.indexOf('gold') > -1 || p.indexOf('luxury') > -1 || p.indexOf('rich') > -1) return ['#7b5e00','#c9a227','#ffd700'];
+  return ['rgba(108,142,255,0.4)','rgba(167,139,250,0.4)','rgba(52,211,153,0.3)'];
+}
+
+function getEmojiForPrompt(prompt) {
+  const p = prompt.toLowerCase();
+  if (p.indexOf('lion') > -1 || p.indexOf('animal') > -1) return '🦁';
+  if (p.indexOf('city') > -1 || p.indexOf('urban') > -1) return '🌆';
+  if (p.indexOf('person') > -1 || p.indexOf('woman') > -1 || p.indexOf('man') > -1 || p.indexOf('portrait') > -1) return '🧑';
+  if (p.indexOf('food') > -1 || p.indexOf('meal') > -1) return '🍽️';
+  if (p.indexOf('nature') > -1 || p.indexOf('mountain') > -1 || p.indexOf('forest') > -1) return '🏔️';
+  if (p.indexOf('space') > -1 || p.indexOf('galaxy') > -1 || p.indexOf('star') > -1) return '🌌';
+  if (p.indexOf('ocean') > -1 || p.indexOf('sea') > -1) return '🌊';
+  if (p.indexOf('sunset') > -1 || p.indexOf('sunrise') > -1) return '🌅';
+  if (p.indexOf('car') > -1 || p.indexOf('vehicle') > -1) return '🚗';
+  return '🖼️';
 }
 
 function usePhotoPrompt(prompt) {
   const el = document.getElementById('p-prompt');
-  if (el) el.value = prompt;
-  showToast('Prompt loaded! Click Generate ✨','💡');
+  if (el) { el.value = prompt; el.focus(); }
+  showToast('Prompt loaded — click Generate!', 'ok');
 }
 
 function triggerPhotoUpload() {
-  if (!useUpload()) return;
-  document.getElementById('photo-edit-input').click();
+  if (!useUpload('photo upload')) return;
+  const inp = document.getElementById('photo-edit-input');
+  if (inp) inp.click();
 }
 
 function handlePhotoUpload(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = function(e) {
       const canvas = document.getElementById('edit-canvas');
-      canvas.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:contain;border-radius:10px">';
-      canvas.onclick = null;
-      showToast('Photo loaded!','📸');
-      updateUploadCounter();
+      if (canvas) {
+        canvas.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:contain;border-radius:10px">';
+        canvas.onclick = null;
+      }
+      showToast('Photo loaded: ' + input.files[0].name, 'ok');
     };
     reader.readAsDataURL(input.files[0]);
   }
 }
 
 function applyPhotoEdit(tool) {
-  const msgs = {'bg-remove':'Removing background...','upscale':'Upscaling 4x...','colorize':'Colorizing...','restore':'Restoring...','cartoon':'Cartoonifying...','face-enhance':'Enhancing faces...','hdr':'Applying HDR...','noise':'Denoising...','crop':'Cropping...','rotate':'Rotating...'};
-  showToast(msgs[tool] || 'Processing...','🎨');
+  const msgs = {'bg-remove':'Removing background...','upscale':'Upscaling 4x...','colorize':'Colorizing...','restore':'Restoring...','cartoon':'Converting to cartoon...','face-enhance':'Enhancing faces...','hdr':'Applying HDR...','noise':'Denoising...','crop':'Cropping...','rotate':'Rotating...'};
+  showToast(msgs[tool] || 'Processing...', 'ok');
 }
 
 function applyPhotoAI() {
-  const prompt = document.getElementById('p-edit-prompt')?.value.trim();
-  if (!prompt) { showToast('Describe your edit first','⚠️'); return; }
-  showToast('AI editing your photo...','✦');
-  setTimeout(() => showToast('Edit applied!','✅'), 2000);
+  const el = document.getElementById('p-edit-prompt');
+  const prompt = el ? el.value.trim() : '';
+  if (!prompt) { showToast('Describe your edit first', 'warn'); return; }
+  showToast('Applying AI edit...', 'ok');
+  setTimeout(function(){ showToast('Edit applied!', 'ok'); }, 2000);
 }
 
 // ===== ANALYTICS =====
@@ -1202,65 +1276,79 @@ function buildBarChart() {
   const chart = document.getElementById('bar-chart');
   if (!chart || chart.children.length > 0) return;
   const data = [{d:'Mon',v:62},{d:'Tue',v:84},{d:'Wed',v:71},{d:'Thu',v:95},{d:'Fri',v:88},{d:'Sat',v:43},{d:'Sun',v:29}];
-  const max = Math.max(...data.map(d => d.v));
-  data.forEach(item => {
+  const max = Math.max.apply(null, data.map(function(d){return d.v;}));
+  data.forEach(function(item) {
     const col = document.createElement('div'); col.className = 'bar-col';
-    col.innerHTML = '<div class="bar" style="height:' + ((item.v/max)*100) + 'px"></div><div class="bar-label">' + item.d + '</div>';
+    col.innerHTML = '<div class="bar" style="height:' + Math.round((item.v/max)*100) + 'px"></div><div class="bar-label">' + item.d + '</div>';
     chart.appendChild(col);
   });
 }
 
 // ===== TOAST =====
 let toastTimer;
-function showToast(msg, icon) {
-  icon = icon || '✅';
+function showToast(msg, type) {
   const t = document.getElementById('toast');
+  if (!t) return;
+  const icons = {ok:'✅', warn:'⚠️', error:'❌', star:'✦', warning:'⚠️'};
+  const icon = icons[type] || '✅';
   t.className = 'toast show';
-  t.innerHTML = '<span>' + icon + '</span>' + msg;
+  t.innerHTML = '<span>' + icon + '</span> ' + msg;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   initTrial();
-  // Mark chat as active by default
-  document.querySelector('.sb-item')?.classList.add('active');
+  const firstNav = document.querySelector('.sb-item');
+  if (firstNav) firstNav.classList.add('active');
+  // Attach file button tracks uploads
+  const attachBtn = document.querySelector('.input-tool[title="Attach file"]');
+  if (attachBtn) {
+    attachBtn.onclick = function() {
+      if (!useUpload('file attachment')) return;
+      showToast('File attached (1 upload used)', 'ok');
+    };
+  }
 });
-</script>
+</script></script>
 
 <!-- TRIAL BANNER -->
 <div class="trial-banner" id="trial-banner">
-  <span>⚡ Free Trial — <span id="trial-days">30</span> days remaining</span>
+  <span>⚡ Extended Free Trial — <span id="trial-days">60</span> days remaining (30 days free + 30 days extended)</span>
   <div class="countdown" id="trial-countdown">Loading...</div>
-  <div class="upgrade-link" onclick="showUpgrade()">Upgrade Now →</div>
+  <div class="upgrade-link" onclick="showUpgrade()">Upgrade to Pro →</div>
 </div>
 
 <!-- UPGRADE MODAL -->
 <div class="upgrade-overlay" id="upgrade-overlay">
   <div class="upgrade-modal">
     <div class="um-icon">🚀</div>
+    
     <h2>Upgrade HK AI</h2>
-    <p>You've reached your free plan limit. Upgrade to continue with unlimited chats, more uploads, video generation, and priority AI responses.</p>
+    <p id="upgrade-reason">You've reached your free plan limit. Upgrade to continue with unlimited chats, more uploads, video generation, and priority AI responses.</p>
     <div class="plans-grid">
       <div class="plan-card">
         <div class="plan-name">Pro</div>
         <div class="plan-price">$9<span>/mo</span></div>
         <ul class="plan-features">
           <li>Unlimited chats</li>
-          <li>50 file uploads/mo</li>
+          <li>10 file uploads/mo</li>
           <li>Web search</li>
-          <li>Video generation</li>
+          <li>Image generation & editing</li>
+          <li>Video generation & editing</li>
           <li>Priority support</li>
         </ul>
       </div>
       <div class="plan-card popular">
         <div class="plan-badge">⭐ Most Popular</div>
-        <div class="plan-name">Enterprise</div>
+        <div class="plan-name">Premium</div>
         <div class="plan-price">$29<span>/mo</span></div>
         <ul class="plan-features">
           <li>Everything in Pro</li>
           <li>Unlimited uploads</li>
+          <li>Advanced image editing tools</li>
+          <li>4K video generation</li>
           <li>Custom AI training</li>
           <li>API access</li>
           <li>Dedicated support</li>
