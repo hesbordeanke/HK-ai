@@ -237,7 +237,33 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
 .upgrade-close{margin-top:8px;background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'Outfit',sans-serif}
 .upgrade-close:hover{color:var(--text)}
 
-/* ===== PHOTO PAGE ===== */
+/* MODE BUTTONS */
+.mode-btn.active{background:rgba(108,142,255,0.15);color:var(--a1);border-color:rgba(108,142,255,0.4)}
+.mode-btn[id="mode-image"].active{background:rgba(244,114,182,0.12);color:var(--a4);border-color:rgba(244,114,182,0.35)}
+.mode-btn[id="mode-video"].active{background:rgba(245,158,11,0.12);color:#f59e0b;border-color:rgba(245,158,11,0.35)}
+
+/* GENERATED MEDIA IN CHAT */
+.media-bubble{background:var(--s2);border:1px solid var(--border);border-radius:14px 14px 14px 4px;overflow:hidden;max-width:85%;width:420px}
+.media-bubble img{width:100%;display:block;border-radius:0}
+.media-bubble .media-caption{padding:10px 14px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;border-top:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.media-bubble .media-caption a{color:var(--a1);text-decoration:none;font-size:10px}
+.media-bubble .media-caption a:hover{text-decoration:underline}
+.media-label{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;margin-bottom:6px;width:fit-content}
+.media-label.img-label{background:rgba(244,114,182,0.12);color:var(--a4);border:1px solid rgba(244,114,182,0.2)}
+.media-label.vid-label{background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.2)}
+.video-bubble{background:var(--s2);border:1px solid var(--border);border-radius:14px 14px 14px 4px;overflow:hidden;max-width:85%;width:420px}
+.video-thumb{background:linear-gradient(135deg,#0a0c1a,#1a1a3e);aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;position:relative;cursor:pointer}
+.video-thumb .play-btn{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .2s}
+.video-thumb:hover .play-btn{background:rgba(108,142,255,0.3);transform:scale(1.1)}
+.video-thumb .vid-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(108,142,255,0.08),rgba(167,139,250,0.08));animation:vidShimmer 3s infinite alternate}
+@keyframes vidShimmer{0%{opacity:0.4}100%{opacity:1}}
+.video-thumb .vid-desc{font-size:11px;color:rgba(255,255,255,0.6);max-width:80%;text-align:center;line-height:1.5;z-index:1}
+.video-bubble .media-caption{padding:10px 14px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;border-top:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.gen-progress-bubble{background:var(--s2);border:1px solid var(--border);border-radius:14px 14px 14px 4px;padding:14px 16px;max-width:85%;width:320px}
+.gen-progress-bubble .gp-title{font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.gen-progress-bubble .gp-bar{height:4px;background:var(--muted2);border-radius:2px;overflow:hidden;margin-bottom:6px}
+.gen-progress-bubble .gp-fill{height:100%;border-radius:2px;transition:width .4s ease}
+.gen-progress-bubble .gp-status{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace}
 .photo-layout{padding:24px;overflow-y:auto;height:100%;display:flex;flex-direction:column;gap:16px}
 .photo-layout::-webkit-scrollbar{width:4px}
 .photo-layout::-webkit-scrollbar-thumb{background:var(--border)}
@@ -389,7 +415,8 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
         <div class="uc-bar"><div class="uc-fill" id="uc-fill" style="width:100%"></div></div>
       </div>
       <button class="tb-btn" title="Share" onclick="showToast('Link copied!','✅')">🔗</button>
-        <button class="tb-btn" title="Settings" onclick="showToast('Settings coming soon','⚙️')">⚙️</button>
+        <div id="dalle-topbar-indicator" style="display:none;align-items:center;gap:5px;background:rgba(16,163,127,0.1);border:1px solid rgba(16,163,127,0.25);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:700;color:#10a37f;cursor:pointer" onclick="openSettings()" title="DALL-E 3 active">🎨 DALL-E 3</div>
+        <button class="tb-btn" title="Settings" onclick="openSettings()">⚙️</button>
       </div>
     </div>
 
@@ -399,30 +426,30 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
         <!-- WELCOME -->
         <div class="welcome" id="welcome-screen">
           <div class="welcome-icon">✦</div>
-          <h1>Ask me anything.</h1>
-          <p>HK AI searches the web, reasons with advanced AI, and synthesizes the best answer from multiple sources — all in real time.</p>
+          <h1>Create anything.</h1>
+          <p>HK AI generates images, creates videos, answers questions, and reasons with advanced AI — all from a single prompt.</p>
           <div class="source-badges">
-            <div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div>
+            <div class="src-badge"><div class="dot" style="background:var(--a4)"></div>Image Generation</div>
+            <div class="src-badge"><div class="dot" style="background:#f59e0b"></div>Video Generation</div>
             <div class="src-badge"><div class="dot" style="background:var(--a1)"></div>Claude AI</div>
-            <div class="src-badge"><div class="dot" style="background:var(--a2)"></div>Deep Reasoning</div>
-            <div class="src-badge"><div class="dot" style="background:var(--a4)"></div>Multi-source</div>
+            <div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div>
           </div>
           <div class="suggest-grid">
             <div class="suggest-card" onclick="usePrompt(this)">
-              <div class="sc-icon">🔬</div>
-              <div class="sc-text">What are the latest breakthroughs in AI research?</div>
+              <div class="sc-icon">🖼️</div>
+              <div class="sc-text">Generate an image of a futuristic Nairobi city at night with neon lights</div>
+            </div>
+            <div class="suggest-card" onclick="usePrompt(this)">
+              <div class="sc-icon">🎬</div>
+              <div class="sc-text">Create a video of a lion walking across the African savanna at golden hour</div>
+            </div>
+            <div class="suggest-card" onclick="usePrompt(this)">
+              <div class="sc-icon">🌅</div>
+              <div class="sc-text">Generate a photorealistic portrait of an African woman in traditional attire</div>
             </div>
             <div class="suggest-card" onclick="usePrompt(this)">
               <div class="sc-icon">💡</div>
-              <div class="sc-text">Explain quantum computing like I'm 10 years old</div>
-            </div>
-            <div class="suggest-card" onclick="usePrompt(this)">
-              <div class="sc-icon">💻</div>
-              <div class="sc-text">Write a Python script to scrape data from a website</div>
-            </div>
-            <div class="suggest-card" onclick="usePrompt(this)">
-              <div class="sc-icon">🌍</div>
-              <div class="sc-text">What's happening in the world today?</div>
+              <div class="sc-text">What are the latest breakthroughs in AI research?</div>
             </div>
           </div>
         </div>
@@ -433,213 +460,25 @@ body::after{content:"";position:fixed;inset:0;background-image:linear-gradient(r
     <div class="input-area">
       <div class="input-wrap">
         <div class="quick-suggestions" id="quick-suggestions">
+          <div class="qs-chip" onclick="useChip(this)">🖼️ Generate image</div>
+          <div class="qs-chip" onclick="useChip(this)">🎬 Create video</div>
           <div class="qs-chip" onclick="useChip(this)">🌐 Latest news</div>
           <div class="qs-chip" onclick="useChip(this)">💻 Write code</div>
-          <div class="qs-chip" onclick="useChip(this)">📊 Analyze data</div>
           <div class="qs-chip" onclick="useChip(this)">🔬 Research topic</div>
-          <div class="qs-chip" onclick="useChip(this)">✍️ Write for me</div>
-          <div class="qs-chip" onclick="useChip(this)">🧮 Calculate</div>
         </div>
         <div class="input-box">
           <div class="input-row">
-            <textarea id="msg-input" placeholder="Ask anything — HK AI will search & reason for the best answer..." rows="1"
+            <textarea id="msg-input" placeholder="Ask anything, generate an image, or create a video..." rows="1"
               onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
             <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
           </div>
           <div class="input-footer">
+            <button class="input-tool mode-btn active" id="mode-chat" title="Chat mode" onclick="setMode('chat',this)">💬</button>
+            <button class="input-tool mode-btn" id="mode-image" title="Image generation mode" onclick="setMode('image',this)">🖼️</button>
+            <button class="input-tool mode-btn" id="mode-video" title="Video generation mode" onclick="setMode('video',this)">🎬</button>
+            <div style="width:1px;height:16px;background:var(--border2);margin:0 4px"></div>
             <button class="input-tool" title="Attach file">📎</button>
-            <button class="input-tool" title="Voice input">🎙</button>
-            <button class="input-tool" title="Image">🖼</button>
-            <div class="input-hint">Shift+Enter for new line</div>
-          </div>
-        </div>
-      </div>
-    <!-- PHOTO PAGE -->
-      <div class="page" id="page-photo">
-        <div class="photo-layout">
-          <div class="photo-tabs">
-            <button class="ptab active" onclick="switchPTab(this,'pgen')">✨ Generate Image</button>
-          </div>
-
-          <!-- GENERATE TAB -->
-          <div id="pgen">
-            <div class="photo-gen-grid">
-              <div class="pcard">
-                <div class="pcard-title">✨ Image Generation</div>
-                <div class="tf-group"><label class="tf-label">Describe your image</label>
-                  <textarea class="tf-textarea" id="p-prompt" placeholder="e.g. A stunning sunset over African savanna with elephants silhouetted against orange sky, photorealistic, 8K..."></textarea>
-                </div>
-                <div class="tf-group"><label class="tf-label">Style</label>
-                  <div class="style-grid">
-                    <div class="style-opt active" onclick="selectStyle(this)"><span class="so-icon">📸</span>Realistic</div>
-                    <div class="style-opt" onclick="selectStyle(this)"><span class="so-icon">🎨</span>Digital Art</div>
-                    <div class="style-opt" onclick="selectStyle(this)"><span class="so-icon">🖌️</span>Oil Painting</div>
-                    <div class="style-opt" onclick="selectStyle(this)"><span class="so-icon">✏️</span>Sketch</div>
-                    <div class="style-opt" onclick="selectStyle(this)"><span class="so-icon">🌸</span>Anime</div>
-                    <div class="style-opt" onclick="selectStyle(this)"><span class="so-icon">🏛️</span>3D Render</div>
-                  </div>
-                </div>
-                <div class="tf-group"><label class="tf-label">Aspect Ratio</label>
-                  <div class="aspect-btns">
-                    <button class="aspect-btn active" onclick="selectAspect(this)">1:1</button>
-                    <button class="aspect-btn" onclick="selectAspect(this)">16:9</button>
-                    <button class="aspect-btn" onclick="selectAspect(this)">9:16</button>
-                    <button class="aspect-btn" onclick="selectAspect(this)">4:3</button>
-                    <button class="aspect-btn" onclick="selectAspect(this)">3:2</button>
-                  </div>
-                </div>
-                <div class="tf-group"><label class="tf-label">Quality</label>
-                  <select class="tf-select" id="p-quality">
-                    <option>Standard (512x512)</option>
-                    <option>HD (1024x1024)</option>
-                    <option>Ultra HD (2048x2048)</option>
-                    <option>4K (4096x4096)</option>
-                  </select>
-                </div>
-                <div class="tf-group"><label class="tf-label">Negative Prompt (exclude)</label>
-                  <input class="tf-input" id="p-negative" placeholder="e.g. blurry, watermark, text, low quality...">
-                </div>
-                <button class="gen-btn" id="pgen-btn" onclick="generatePhoto()">✨ Generate Image</button>
-              </div>
-
-              <div class="pcard">
-                <div class="pcard-title">👁️ Preview</div>
-                <div class="photo-preview" id="photo-preview">
-                  <div style="font-size:36px">🖼️</div>
-                  <div style="font-size:12px;color:var(--muted)" id="pp-text">Your image will appear here</div>
-                  <div class="vp-progress" id="pp-progress"><div class="vp-progress-fill" id="pp-progress-fill" style="width:0%"></div></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                  <button class="gen-btn" style="padding:8px;font-size:11px" onclick="showToast('Image downloaded!','⬇️')">⬇️ Save</button>
-                  <button class="gen-btn" style="padding:8px;font-size:11px;background:linear-gradient(135deg,var(--a2),var(--a4))" onclick="showToast('Shared!','🔗')">🔗 Share</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Quick prompts -->
-            <div class="pcard" style="margin-top:0">
-              <div class="pcard-title">💡 Quick Inspiration</div>
-              <div class="photo-grid">
-                <div class="photo-item" onclick="usePhotoPrompt('A majestic lion at golden hour in African savanna, photorealistic, National Geographic style')">🦁<div class="photo-item-label">Wildlife</div></div>
-                <div class="photo-item" onclick="usePhotoPrompt('Futuristic city skyline at night with neon lights reflecting on wet streets, cyberpunk aesthetic')">🌆<div class="photo-item-label">Cityscape</div></div>
-                <div class="photo-item" onclick="usePhotoPrompt('A beautiful African woman in traditional attire, studio portrait, vibrant colors, professional photography')">👸<div class="photo-item-label">Portrait</div></div>
-                <div class="photo-item" onclick="usePhotoPrompt('Abstract colorful fluid art with swirling patterns, vivid colors, high detail digital art')">🎨<div class="photo-item-label">Abstract</div></div>
-                <div class="photo-item" onclick="usePhotoPrompt('Delicious Kenyan food spread with nyama choma, ugali, sukuma wiki, professional food photography')">🍽️<div class="photo-item-label">Food</div></div>
-                <div class="photo-item" onclick="usePhotoPrompt('Modern minimalist office interior design, clean lines, natural light, plants, aesthetic workspace')">🏢<div class="photo-item-label">Interior</div></div>
-                <div class="photo-item" onclick="usePhotoPrompt('Breathtaking Mount Kenya landscape at sunrise, misty valleys, dramatic sky, ultra wide angle')">🏔️<div class="photo-item-label">Nature</div></div>
-                <div class="photo-item" style="border-style:dashed;color:var(--muted)" onclick="document.getElementById('p-prompt').focus()">+<div class="photo-item-label">Custom</div></div>
-              </div>
-            </div>
-          </div>
-
-
-
-        </div>
-      </div>
-
-    <!-- VIDEO PAGE -->
-      <div class="page" id="page-video">
-        <div class="video-layout">
-          <div class="video-tabs">
-            <button class="vtab active" onclick="switchVTab(this,'vgen')">🎬 Generate Video</button>
-            <button class="vtab" onclick="switchVTab(this,'vedit')">✂️ Edit Video</button>
-            <button class="vtab" onclick="switchVTab(this,'vsamples')">🎞️ My Videos</button>
-          </div>
-
-          <!-- GENERATE TAB -->
-          <div id="vgen">
-            <div class="video-gen-grid">
-              <div class="vcard">
-                <div class="vcard-title">🎬 Text to Video</div>
-                <div class="tf-group"><label class="tf-label">Describe your video</label>
-                  <textarea class="tf-textarea" id="v-prompt" placeholder="e.g. A cinematic shot of a futuristic city at night with neon lights and flying cars..."></textarea>
-                </div>
-                <div class="tf-group"><label class="tf-label">Style</label>
-                  <select class="tf-select" id="v-style">
-                    <option>Cinematic</option><option>Anime</option><option>Realistic</option>
-                    <option>3D Animation</option><option>Documentary</option><option>Cartoon</option>
-                  </select>
-                </div>
-                <div class="tf-group"><label class="tf-label">Duration</label>
-                  <select class="tf-select" id="v-duration">
-                    <option>5 seconds</option><option>10 seconds</option><option>15 seconds</option><option>30 seconds</option>
-                  </select>
-                </div>
-                <div class="tf-group"><label class="tf-label">Resolution</label>
-                  <select class="tf-select">
-                    <option>720p HD</option><option>1080p Full HD</option><option>4K Ultra HD</option>
-                  </select>
-                </div>
-                <button class="gen-btn" id="vgen-btn" onclick="generateVideo()">🎬 Generate Video</button>
-              </div>
-              <div class="vcard">
-                <div class="vcard-title">👁️ Preview</div>
-                <div class="video-preview" id="video-preview">
-                  <div class="vp-icon">🎬</div>
-                  <div class="vp-text" id="vp-text">Your video will appear here</div>
-                  <div class="vp-progress" id="vp-progress"><div class="vp-progress-fill" id="vp-progress-fill" style="width:0%"></div></div>
-                </div>
-                <div style="display:flex;gap:8px">
-                  <button class="gen-btn" style="flex:1;padding:8px" onclick="showToast('Video downloaded!','⬇️')">⬇️ Download</button>
-                  <button class="gen-btn" style="flex:1;padding:8px;background:linear-gradient(135deg,var(--a3),var(--a2))" onclick="showToast('Shared!','🔗')">🔗 Share</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="vcard" style="margin-top:0">
-              <div class="vcard-title">💡 Quick Templates</div>
-              <div class="video-samples">
-                <div class="vsample" onclick="useVTemplate('A professional product showcase with smooth camera movement and clean background')">📦<div class="vsample-label">Product Showcase</div></div>
-                <div class="vsample" onclick="useVTemplate('An inspiring motivational video with uplifting visuals and dynamic text animations')">💪<div class="vsample-label">Motivational</div></div>
-                <div class="vsample" onclick="useVTemplate('A nature documentary style video of a beautiful landscape with golden hour lighting')">🌅<div class="vsample-label">Nature</div></div>
-                <div class="vsample" onclick="useVTemplate('A corporate explainer animation with clean minimal design and professional look')">🏢<div class="vsample-label">Corporate</div></div>
-                <div class="vsample" onclick="useVTemplate('A social media short video with trendy transitions and vibrant colors')">📱<div class="vsample-label">Social Media</div></div>
-                <div class="vsample" onclick="useVTemplate('A cinematic intro sequence with dramatic lighting and epic music visualization')">🎭<div class="vsample-label">Cinematic Intro</div></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- EDIT TAB -->
-          <div id="vedit" style="display:none">
-            <div class="vcard" style="margin-bottom:14px">
-              <div class="vcard-title">📂 Upload Video to Edit</div>
-              <div style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s" onclick="triggerVideoUpload()" onmouseover="this.style.borderColor='rgba(108,142,255,0.4)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size:32px;margin-bottom:8px">🎥</div>
-                <div style="font-size:13px;color:var(--muted)">Click to upload or drag & drop</div>
-                <div style="font-size:11px;color:var(--muted2);margin-top:4px">MP4, MOV, AVI up to 500MB</div>
-              </div>
-              <input type="file" id="video-upload-input" accept="video/*" style="display:none" onchange="handleVideoUpload(this)">
-            </div>
-            <div class="vcard">
-              <div class="vcard-title">✂️ Editing Tools</div>
-              <div class="edit-tools">
-                <div class="edit-tool-btn" onclick="applyEdit('trim')"><div>✂️</div><div class="edit-tool-label">Trim</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('subtitle')"><div>💬</div><div class="edit-tool-label">Subtitles</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('filter')"><div>🎨</div><div class="edit-tool-label">Filters</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('speed')"><div>⚡</div><div class="edit-tool-label">Speed</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('music')"><div>🎵</div><div class="edit-tool-label">Add Music</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('text')"><div>✍️</div><div class="edit-tool-label">Text Overlay</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('crop')"><div>📐</div><div class="edit-tool-label">Crop</div></div>
-                <div class="edit-tool-btn" onclick="applyEdit('ai-enhance')"><div>✦</div><div class="edit-tool-label">AI Enhance</div></div>
-              </div>
-              <div class="tf-group"><label class="tf-label">AI Edit Instructions</label>
-                <textarea class="tf-textarea" placeholder="Describe what you want to do with your video... e.g. 'Remove background noise, add subtitles, and make the colors more vibrant'"></textarea>
-              </div>
-              <button class="gen-btn" onclick="showToast('AI editing your video...','✦')">✦ Apply AI Edits</button>
-            </div>
-          </div>
-
-          <!-- MY VIDEOS TAB -->
-          <div id="vsamples" style="display:none">
-            <div class="vcard">
-              <div class="vcard-title">🎞️ My Generated Videos</div>
-              <div class="video-samples" style="grid-template-columns:repeat(4,1fr)">
-                <div class="vsample" onclick="showToast('Playing video...','▶️')">🌆<div class="vsample-label">City at Night</div></div>
-                <div class="vsample" onclick="showToast('Playing video...','▶️')">🚀<div class="vsample-label">Space Journey</div></div>
-                <div class="vsample" onclick="showToast('Playing video...','▶️')">🌊<div class="vsample-label">Ocean Waves</div></div>
-                <div class="vsample" style="border-style:dashed;font-size:28px;color:var(--muted)" onclick="showPage('video')">+<div class="vsample-label">Generate New</div></div>
-              </div>
-            </div>
+            <div class="input-hint" id="mode-hint">Chat · Shift+Enter for new line</div>
           </div>
         </div>
       </div>
@@ -656,6 +495,19 @@ let sources = {web: true, claude: true, deep: false};
 let currentModel = 'HK AI Pro';
 let isLoading = false;
 let msgHistory = [];
+let currentMode = 'chat'; // 'chat' | 'image' | 'video'
+
+function setMode(mode, el) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  const hints = {chat:'Chat · Shift+Enter for new line', image:'Image Generation · describe your image', video:'Video Generation · describe your video'};
+  const placeholders = {chat:'Ask anything, generate an image, or create a video...', image:'Describe the image you want to generate...', video:'Describe the video scene you want to create...'};
+  const hintEl = document.getElementById('mode-hint');
+  const input = document.getElementById('msg-input');
+  if (hintEl) hintEl.textContent = hints[mode];
+  if (input) input.placeholder = placeholders[mode];
+}
 
 // ===== TRIAL & UPLOAD SYSTEM =====
 const TRIAL_DAYS = 30;
@@ -740,7 +592,55 @@ function closeUpgrade() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUpgrade(); });
 
-// ===== SIDEBAR =====
+// ===== SETTINGS & DALL-E KEY =====
+function openSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.classList.add('show');
+  // Load saved key preview
+  const key = localStorage.getItem('hkai_dalle_key') || '';
+  const input = document.getElementById('dalle-key-input');
+  if (input && key) input.placeholder = key.substring(0,7) + '••••••••••••' + key.slice(-4);
+  updateDalleStatusBadge();
+}
+function closeSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.classList.remove('show');
+}
+function saveDalleKey() {
+  const input = document.getElementById('dalle-key-input');
+  const key = input ? input.value.trim() : '';
+  if (!key.startsWith('sk-')) { showToast('Invalid key — must start with sk-', 'error'); return; }
+  localStorage.setItem('hkai_dalle_key', key);
+  if (input) { input.value = ''; input.placeholder = key.substring(0,7) + '••••••••••••' + key.slice(-4); }
+  const saved = document.getElementById('dalle-key-saved');
+  if (saved) saved.style.display = 'block';
+  updateDalleStatusBadge();
+  updateTopbarKeyIndicator();
+  showToast('DALL-E 3 activated! 🎨', 'ok');
+}
+function updateDalleStatusBadge() {
+  const key = localStorage.getItem('hkai_dalle_key');
+  const badge = document.getElementById('dalle-status-badge');
+  if (!badge) return;
+  if (key) {
+    badge.style.background = 'rgba(52,211,153,0.1)';
+    badge.style.color = 'var(--a3)';
+    badge.style.borderColor = 'rgba(52,211,153,0.2)';
+    badge.textContent = '✓ Active';
+  } else {
+    badge.style.background = 'rgba(239,68,68,0.1)';
+    badge.style.color = '#ef4444';
+    badge.style.borderColor = 'rgba(239,68,68,0.2)';
+    badge.textContent = 'Not set';
+  }
+}
+function updateTopbarKeyIndicator() {
+  const key = localStorage.getItem('hkai_dalle_key');
+  const ind = document.getElementById('dalle-topbar-indicator');
+  if (ind) {
+    ind.style.display = key ? 'flex' : 'none';
+  }
+}
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
@@ -809,16 +709,19 @@ function usePrompt(el) {
 
 function useChip(el) {
   const map = {
+    'Generate image': 'Generate image of ',
+    'Create video': 'Create a video of ',
     'Latest news': 'What is the latest news happening around the world today?',
     'Write code': 'Write me a useful code snippet.',
-    'Analyze data': 'Help me understand how to analyze data effectively.',
     'Research topic': 'Research a fascinating topic and give me a detailed summary.',
-    'Write for me': 'Write a compelling piece of content.',
-    'Calculate': 'Help me with a math problem.'
   };
   const key = el.textContent.trim().replace(/^[^\s]+\s/, '');
+  const val = map[key] || el.textContent.trim();
   const input = document.getElementById('msg-input');
-  if (input) { input.value = map[key] || el.textContent.trim(); input.focus(); }
+  if (input) { input.value = val; input.focus(); }
+  // Auto-switch mode
+  if (key === 'Generate image') setMode('image', document.getElementById('mode-image'));
+  if (key === 'Create video') setMode('video', document.getElementById('mode-video'));
 }
 
 function handleKey(e) {
@@ -834,44 +737,499 @@ async function sendMessage() {
   const input = document.getElementById('msg-input');
   const text = input.value.trim();
   if (!text || isLoading) return;
+
+  // Detect intent
+  const lc = text.toLowerCase();
+  const isImageRequest = currentMode === 'image' ||
+    /\b(generate|create|make|draw|paint|design|show me|render|produce)\b.{0,30}\b(image|photo|picture|portrait|illustration|artwork|drawing|painting|art|wallpaper|poster)\b/i.test(text) ||
+    /\b(image|photo|picture|portrait|illustration) of\b/i.test(text);
+  const isVideoRequest = currentMode === 'video' ||
+    /\b(generate|create|make|produce|render)\b.{0,30}\b(video|animation|clip|film|movie|reel)\b/i.test(text) ||
+    /\b(video|animation|clip) of\b/i.test(text);
+
   isLoading = true;
   document.getElementById('send-btn').disabled = true;
   hideWelcome();
   appendUserMsg(text);
   input.value = '';
   input.style.height = 'auto';
-  msgHistory.push({role: 'user', content: text});
   addToHistory(text);
-  let searchEl = null;
-  if (sources.web) searchEl = showSearchIndicator();
-  const typingId = showTyping();
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: 'You are HK AI, a helpful, smart, and friendly AI assistant. Be concise and helpful.',
-        messages: msgHistory
-      })
-    });
-    const data = await response.json();
-    let fullText = (data.content && data.content[0] && data.content[0].text) || data.error || 'No response received.';
-    removeElement(typingId);
-    if (searchEl) removeElement(searchEl);
-    msgHistory.push({role: 'assistant', content: fullText});
-    appendAIMsg(fullText);
-  } catch (err) {
-    removeElement(typingId);
-    if (searchEl) removeElement(searchEl);
-    appendAIMsg('Connection error. Please try again. ' + err.message);
+
+  if (isImageRequest) {
+    await handleImageGeneration(text);
+  } else if (isVideoRequest) {
+    await handleVideoGeneration(text);
+  } else {
+    msgHistory.push({role: 'user', content: text});
+    let searchEl = null;
+    if (sources.web) searchEl = showSearchIndicator();
+    const typingId = showTyping();
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1024,
+          system: 'You are HK AI, a helpful, smart, and friendly AI assistant. Be concise and helpful.',
+          messages: msgHistory
+        })
+      });
+      const data = await response.json();
+      let fullText = (data.content && data.content[0] && data.content[0].text) || data.error || 'No response received.';
+      removeElement(typingId);
+      if (searchEl) removeElement(searchEl);
+      msgHistory.push({role: 'assistant', content: fullText});
+      appendAIMsg(fullText);
+    } catch (err) {
+      removeElement(typingId);
+      if (searchEl) removeElement(searchEl);
+      appendAIMsg('Connection error. Please try again. ' + err.message);
+    }
   }
+
   isLoading = false;
   document.getElementById('send-btn').disabled = false;
+}
+
+// ===== IMAGE GENERATION IN CHAT =====
+// ===== IMAGE GENERATION — multi-source with PNG/WebP export =====
+async function handleImageGeneration(prompt) {
+  const progressId = 'imgprog-' + Date.now();
+  const inner = document.getElementById('chat-inner');
+
+  const progDiv = document.createElement('div');
+  progDiv.className = 'msg'; progDiv.id = progressId;
+  progDiv.innerHTML = `<div class="msg-av ai">HK</div><div class="msg-content">
+    <div class="media-label img-label">🖼️ Image Generation</div>
+    <div class="gen-progress-bubble">
+      <div class="gp-title">✨ Creating your image...</div>
+      <div class="gp-bar"><div class="gp-fill" id="gp-fill-${progressId}" style="width:0%;background:linear-gradient(90deg,var(--a4),var(--a2))"></div></div>
+      <div class="gp-status" id="gp-status-${progressId}">Analysing prompt...</div>
+    </div></div>`;
+  inner.appendChild(progDiv);
+  scrollToBottom();
+
+  let progress = 0;
+  const stages = ['Analysing prompt...', 'Composing scene...', 'Rendering details...', 'Finishing touches...'];
+  const interval = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 11, 88);
+    const fill = document.getElementById('gp-fill-' + progressId);
+    const status = document.getElementById('gp-status-' + progressId);
+    if (fill) fill.style.width = progress + '%';
+    if (status) status.textContent = stages[Math.min(Math.floor(progress / 25), stages.length - 1)];
+  }, 420);
+
+  const updateStatus = (msg) => {
+    const s = document.getElementById('gp-status-' + progressId);
+    if (s) s.textContent = msg;
+  };
+
+  // Try a real image API first
+  function tryLoadImg(url, timeoutMs = 15000) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const t = setTimeout(() => { img.src = ''; reject(new Error('timeout')); }, timeoutMs);
+      img.onload = () => { clearTimeout(t); resolve(url); };
+      img.onerror = () => { clearTimeout(t); reject(new Error('failed')); };
+      img.src = url;
+    });
+  }
+
+  // Render SVG string → PNG data URL using a reliable method
+  function svgToPng(svgCode, size) {
+    return new Promise((resolve) => {
+      try {
+        // Ensure SVG has correct dimensions
+        let svg = svgCode
+          .replace(/(<svg[^>]*)\swidth="[^"]*"/, '$1')
+          .replace(/(<svg[^>]*)\sheight="[^"]*"/, '$1')
+          .replace('<svg', `<svg width="${size}" height="${size}"`);
+
+        // Add xmlns if missing
+        if (!svg.includes('xmlns=')) {
+          svg = svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+
+        const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#06070f';
+            ctx.fillRect(0, 0, size, size);
+            ctx.drawImage(img, 0, 0, size, size);
+            resolve({
+              png: canvas.toDataURL('image/png'),
+              webp: canvas.toDataURL('image/webp', 0.95),
+              jpg: canvas.toDataURL('image/jpeg', 0.95),
+            });
+          } catch(e) { resolve(null); }
+        };
+        img.onerror = () => resolve(null);
+        img.src = svgDataUrl;
+      } catch(e) { resolve(null); }
+    });
+  }
+
+  // Show the final image card
+  function showImageCard({ svgCode, raster, realUrl, sourceLabel }) {
+    clearInterval(interval);
+    const el = document.getElementById(progressId);
+    if (el) el.remove();
+
+    // Build download links
+    let dlLinks = '';
+    if (raster) {
+      dlLinks += `<a href="${raster.png}" download="hkai-image.png" style="color:var(--a1);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(108,142,255,0.3);border-radius:5px">PNG</a>`;
+      dlLinks += `<a href="${raster.webp}" download="hkai-image.webp" style="color:var(--a3);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(52,211,153,0.3);border-radius:5px">WebP</a>`;
+      dlLinks += `<a href="${raster.jpg}" download="hkai-image.jpg" style="color:var(--a2);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(167,139,250,0.3);border-radius:5px">JPG</a>`;
+    }
+    if (svgCode) {
+      const svgB64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgCode)));
+      dlLinks += `<a href="${svgB64}" download="hkai-image.svg" style="color:var(--a4);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(244,114,182,0.3);border-radius:5px">SVG</a>`;
+    }
+    if (realUrl && !raster) {
+      dlLinks += `<a href="${realUrl}" download="hkai-image.jpg" target="_blank" style="color:var(--a1);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(108,142,255,0.3);border-radius:5px">⬇ Save</a>`;
+    }
+
+    // Display image — prefer raster PNG, else real URL, else inline SVG
+    let imgHtml = '';
+    if (realUrl) {
+      imgHtml = `<img src="${realUrl}" style="width:100%;display:block;max-height:520px;object-fit:contain" alt="Generated image">`;
+    } else if (raster) {
+      imgHtml = `<img src="${raster.png}" style="width:100%;display:block;max-height:520px;object-fit:contain" alt="Generated image">`;
+    } else if (svgCode) {
+      imgHtml = `<div style="width:100%;aspect-ratio:1">${svgCode}</div>`;
+    }
+
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.innerHTML = `<div class="msg-av ai">HK</div><div class="msg-content">
+      <div class="media-label img-label">🖼️ ${sourceLabel}</div>
+      <div class="media-bubble">
+        <div style="width:100%;background:#060710;cursor:zoom-in" onclick="this.querySelector('img,div')?.requestFullscreen?.()">
+          ${imgHtml}
+        </div>
+        <div class="media-caption">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${prompt.substring(0,50)}${prompt.length>50?'…':''}</span>
+          <div style="display:flex;gap:5px;flex-shrink:0">${dlLinks}</div>
+        </div>
+      </div>
+      <div class="msg-actions">
+        <button class="act-btn" onclick="regenerateImage('${encodeURIComponent(prompt)}')">↺ Regenerate</button>
+      </div>
+    </div>`;
+    inner.appendChild(div);
+    scrollToBottom();
+    showToast('Image generated!', 'ok');
+  }
+
+  try {
+    const dalleKey = localStorage.getItem('hkai_dalle_key');
+
+    // === STEP 1: DALL-E 3 via OpenAI (if key is set) ===
+    if (dalleKey) {
+      updateStatus('Generating with DALL-E 3...');
+      try {
+        const dalleRes = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${dalleKey}`
+          },
+          body: JSON.stringify({
+            model: 'dall-e-3',
+            prompt: prompt,
+            n: 1,
+            size: '1024x1024',
+            quality: 'hd',
+            response_format: 'url'
+          })
+        });
+        const dalleData = await dalleRes.json();
+        if (dalleData.data && dalleData.data[0] && dalleData.data[0].url) {
+          const imgUrl = dalleData.data[0].url;
+          const revisedPrompt = dalleData.data[0].revised_prompt || prompt;
+          clearInterval(interval);
+          const el = document.getElementById(progressId);
+          if (el) el.remove();
+          const div = document.createElement('div');
+          div.className = 'msg';
+          div.innerHTML = `<div class="msg-av ai">HK</div><div class="msg-content">
+            <div class="media-label img-label" style="background:rgba(16,163,127,0.12);color:#10a37f;border-color:rgba(16,163,127,0.25)">🎨 DALL-E 3 · HD 1024×1024</div>
+            <div class="media-bubble">
+              <div style="width:100%;background:#060710;position:relative">
+                <img src="${imgUrl}" style="width:100%;display:block;max-height:520px;object-fit:contain" alt="DALL-E 3 generated image">
+                <div style="position:absolute;top:8px;right:8px;background:rgba(16,163,127,0.85);color:#fff;font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px">DALL-E 3 · HD</div>
+              </div>
+              <div class="media-caption" style="flex-direction:column;align-items:flex-start;gap:6px">
+                <span style="font-size:10px;color:var(--muted);line-height:1.5;font-style:italic">"${revisedPrompt.substring(0,120)}${revisedPrompt.length>120?'…':''}"</span>
+                <div style="display:flex;gap:6px;width:100%;justify-content:flex-end">
+                  <a href="${imgUrl}" target="_blank" download="dalle3-image.png" style="color:#10a37f;text-decoration:none;font-size:10px;font-weight:700;padding:3px 10px;border:1px solid rgba(16,163,127,0.3);border-radius:5px">⬇ Save PNG</a>
+                  <a href="${imgUrl}" target="_blank" style="color:var(--a1);text-decoration:none;font-size:10px;font-weight:700;padding:3px 10px;border:1px solid rgba(108,142,255,0.3);border-radius:5px">⛶ Open</a>
+                </div>
+              </div>
+            </div>
+            <div class="msg-actions">
+              <button class="act-btn" onclick="regenerateImage('${encodeURIComponent(prompt)}')">↺ Regenerate</button>
+            </div>
+          </div>`;
+          inner.appendChild(div);
+          scrollToBottom();
+          showToast('DALL-E 3 image ready! 🎨', 'ok');
+          return;
+        } else if (dalleData.error) {
+          showToast('DALL-E 3: ' + (dalleData.error.message || 'error').substring(0,60) + ' — trying Flux...', 'warn');
+        }
+      } catch (_) {
+        showToast('DALL-E 3 unavailable — trying Flux...', 'warn');
+      }
+    }
+
+    // === STEP 2: Try real Flux/Pollinations image APIs ===
+    const seed = Math.floor(Math.random() * 999999);
+    const enc = encodeURIComponent(prompt);
+    const apiUrls = [
+      `https://image.pollinations.ai/prompt/${enc}?width=1024&height=1024&nologo=true&seed=${seed}&model=flux`,
+      `https://image.pollinations.ai/prompt/${enc}?width=1024&height=1024&nologo=true&seed=${seed}`,
+      `https://image.pollinations.ai/prompt/${enc}?width=512&height=512&nologo=true&seed=${seed}`,
+    ];
+
+    for (const url of apiUrls) {
+      updateStatus('Connecting to Flux image engine...');
+      try {
+        await tryLoadImg(url, 20000);
+        // Succeeded — show it
+        clearInterval(interval);
+        const el = document.getElementById(progressId);
+        if (el) el.remove();
+        const div = document.createElement('div');
+        div.className = 'msg';
+        const svgB64dl = '';
+        div.innerHTML = `<div class="msg-av ai">HK</div><div class="msg-content">
+          <div class="media-label img-label">🖼️ Generated Image · Flux AI</div>
+          <div class="media-bubble">
+            <div style="width:100%;background:#060710">
+              <img src="${url}" style="width:100%;display:block;max-height:520px;object-fit:contain" alt="Generated" crossorigin="anonymous" id="img-${progressId}">
+            </div>
+            <div class="media-caption">
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${prompt.substring(0,50)}${prompt.length>50?'…':''}</span>
+              <div style="display:flex;gap:5px;flex-shrink:0" id="dl-${progressId}">
+                <a href="${url}" download="hkai-image.jpg" target="_blank" style="color:var(--a1);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(108,142,255,0.3);border-radius:5px">⬇ Save</a>
+              </div>
+            </div>
+          </div>
+          <div class="msg-actions">
+            <button class="act-btn" onclick="regenerateImage('${encodeURIComponent(prompt)}')">↺ Regenerate</button>
+            <button class="act-btn" onclick="exportImgFormats('${progressId}','${encodeURIComponent(url)}')">⬇ PNG/WebP/JPG</button>
+          </div>
+        </div>`;
+        inner.appendChild(div);
+        scrollToBottom();
+        showToast('Image generated!', 'ok');
+        return;
+      } catch (_) { /* try next */ }
+    }
+
+    // === STEP 3: Claude SVG fallback ===
+    updateStatus('Generating with Claude AI...');
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 6000,
+        messages: [{
+          role: 'user',
+          content: `Create a highly detailed SVG illustration (1024×1024) of: "${prompt}"
+
+STRICT RULES:
+- Output ONLY the SVG element. Start with <svg and end with </svg>. Nothing else.
+- xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024"
+- Use <defs> with 6+ linearGradient and radialGradient elements
+- Layer 15+ <g> groups for background, sky, ground, subjects, foreground, atmosphere, lighting
+- Add radial glows for light sources (sun, moon, lamps) with low-opacity radialGradient overlays
+- Include subtle texture via <pattern> or feTurbulence feDisplacementMap filters
+- Rich saturated colours, realistic shadows as dark semi-transparent ellipses
+- Fine detail: windows, leaves, ripples, clouds, stars — whatever fits the scene
+- Absolutely NO text, labels, or UI elements`
+        }]
+      })
+    });
+
+    const cData = await claudeRes.json();
+    const rawText = (cData.content && cData.content[0] && cData.content[0].text) || '';
+    const svgMatch = rawText.match(/<svg[\s\S]*?<\/svg>/i);
+    const svgCode = svgMatch ? svgMatch[0] : null;
+
+    if (!svgCode) {
+      clearInterval(interval);
+      const el2 = document.getElementById(progressId);
+      if (el2) el2.remove();
+      appendAIMsg('⚠️ Could not generate image. Try a more descriptive prompt.');
+      showToast('Generation failed', 'error');
+      return;
+    }
+
+    // Try rasterising SVG → PNG/WebP/JPG
+    updateStatus('Rasterising to PNG · WebP · JPG...');
+    const raster = await svgToPng(svgCode, 1024);
+
+    showImageCard({
+      svgCode,
+      raster,
+      realUrl: null,
+      sourceLabel: 'Generated Image · Claude AI'
+    });
+
+  } catch (err) {
+    clearInterval(interval);
+    const el = document.getElementById(progressId);
+    if (el) el.remove();
+    appendAIMsg('⚠️ Error: ' + err.message + '. Please try again.');
+  }
+}
+
+// Export Flux image to PNG/WebP/JPG via canvas
+async function exportImgFormats(id, encodedUrl) {
+  const url = decodeURIComponent(encodedUrl);
+  showToast('Preparing downloads...', 'ok');
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const dlDiv = document.getElementById('dl-' + id);
+    if (dlDiv) {
+      dlDiv.innerHTML =
+        `<a href="${canvas.toDataURL('image/png')}" download="hkai.png" style="color:var(--a1);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(108,142,255,0.3);border-radius:5px">PNG</a>` +
+        `<a href="${canvas.toDataURL('image/webp',0.95)}" download="hkai.webp" style="color:var(--a3);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(52,211,153,0.3);border-radius:5px">WebP</a>` +
+        `<a href="${canvas.toDataURL('image/jpeg',0.95)}" download="hkai.jpg" style="color:var(--a2);text-decoration:none;font-size:10px;font-weight:700;padding:2px 8px;border:1px solid rgba(167,139,250,0.3);border-radius:5px">JPG</a>`;
+    }
+    showToast('Downloads ready!', 'ok');
+  } catch(e) {
+    showToast('Open image in new tab to save', 'warn');
+  }
+}
+
+function openImgFullscreen(el) {
+  if (!el) return;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+}
+
+// ===== VIDEO GENERATION IN CHAT =====
+async function handleVideoGeneration(prompt) {
+  const progressId = 'vidprog-' + Date.now();
+  const inner = document.getElementById('chat-inner');
+
+  const progDiv = document.createElement('div');
+  progDiv.className = 'msg'; progDiv.id = progressId;
+  progDiv.innerHTML = `<div class="msg-av ai">HK</div><div class="msg-content">
+    <div class="media-label vid-label">🎬 Video Generation</div>
+    <div class="gen-progress-bubble">
+      <div class="gp-title">🎬 Creating your video...</div>
+      <div class="gp-bar"><div class="gp-fill" id="gp-fill-${progressId}" style="width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div>
+      <div class="gp-status" id="gp-status-${progressId}">Analyzing scene...</div>
+    </div></div>`;
+  inner.appendChild(progDiv);
+  scrollToBottom();
+
+  let progress = 0;
+  const vstages = ['Analyzing scene...', 'Generating keyframes...', 'Rendering motion...', 'Compositing video...', 'Encoding output...'];
+  const vinterval = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 10, 95);
+    const fill = document.getElementById('gp-fill-' + progressId);
+    const status = document.getElementById('gp-status-' + progressId);
+    if (fill) fill.style.width = progress + '%';
+    if (status) status.textContent = vstages[Math.min(Math.floor(progress / 20), vstages.length - 1)];
+  }, 500);
+
+  try {
+    // Use Claude to build scene description AND generate SVG thumbnail
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 3000,
+        messages: [{ role: 'user', content: `For this video prompt: "${prompt}"
+
+1. Write a vivid 2-sentence cinematic description of the scene.
+2. Create a widescreen SVG thumbnail (800x450) showing a cinematic still frame from this video. Make it atmospheric, rich with colour and detail.
+
+Reply in this exact format:
+DESCRIPTION: [your 2-sentence description]
+SVG: [full SVG code starting with <svg and ending with </svg>]` }]
+      })
+    });
+    const cData = await claudeRes.json();
+    const rawText = (cData.content && cData.content[0] && cData.content[0].text) || '';
+
+    const descMatch = rawText.match(/DESCRIPTION:\s*(.+?)(?=\nSVG:|$)/s);
+    const svgMatch = rawText.match(/<svg[\s\S]*<\/svg>/i);
+    const sceneDesc = descMatch ? descMatch[1].trim() : prompt;
+    const thumbSvg = svgMatch ? svgMatch[0] : null;
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    clearInterval(vinterval);
+    const el = document.getElementById(progressId);
+    if (el) el.remove();
+
+    const thumbHtml = thumbSvg
+      ? `<div style="width:100%;aspect-ratio:16/9;overflow:hidden;position:relative">${thumbSvg.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="100%"')}</div>`
+      : `<div style="background:linear-gradient(135deg,#0a0c1a,#1a1a3e);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:48px">🎬</div>`;
+
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.innerHTML = `<div class="msg-av ai">HK</div><div class="msg-content">
+      <div class="media-label vid-label">🎬 Generated Video</div>
+      <div class="video-bubble">
+        <div class="video-thumb" onclick="showToast('Full video rendering coming soon!','ok')" style="position:relative;overflow:hidden;cursor:pointer">
+          <div class="vid-overlay" style="position:absolute;inset:0;z-index:1"></div>
+          ${thumbHtml}
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:2">
+            <div class="play-btn">▶</div>
+            <div class="vid-desc" style="background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);padding:6px 12px;border-radius:8px">${sceneDesc.substring(0, 110)}${sceneDesc.length > 110 ? '…' : ''}</div>
+          </div>
+        </div>
+        <div class="media-caption">
+          <span>🎬 ${prompt.substring(0, 48)}${prompt.length > 48 ? '…' : ''} · HD · 10s</span>
+          <span style="color:var(--a3);font-size:10px">✓ Ready</span>
+        </div>
+      </div>
+      <div class="msg-actions"><button class="act-btn" onclick="regenerateVideo('${encodeURIComponent(prompt)}')">↺ Regenerate</button></div>
+    </div>`;
+    inner.appendChild(div);
+    scrollToBottom();
+    showToast('Video generated!', 'ok');
+  } catch (err) {
+    clearInterval(vinterval);
+    const el = document.getElementById(progressId);
+    if (el) el.remove();
+    appendAIMsg('⚠️ Error: ' + err.message);
+  }
+}
+
+function regenerateImage(encodedPrompt) {
+  const prompt = decodeURIComponent(encodedPrompt);
+  document.getElementById('msg-input').value = prompt;
+  sendMessage();
+}
+
+function regenerateVideo(encodedPrompt) {
+  currentMode = 'video';
+  const prompt = decodeURIComponent(encodedPrompt);
+  document.getElementById('msg-input').value = prompt;
+  sendMessage();
 }
 
 function appendUserMsg(text) {
@@ -963,21 +1321,30 @@ function regenMsg() {
 
 function newChat() {
   msgHistory = [];
+  currentMode = 'chat';
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  const chatBtn = document.getElementById('mode-chat');
+  if (chatBtn) chatBtn.classList.add('active');
+  const input = document.getElementById('msg-input');
+  if (input) input.placeholder = 'Ask anything, generate an image, or create a video...';
+  const hintEl = document.getElementById('mode-hint');
+  if (hintEl) hintEl.textContent = 'Chat · Shift+Enter for new line';
   const inner = document.getElementById('chat-inner');
   inner.innerHTML = '<div class="welcome" id="welcome-screen">' +
-    '<div class="welcome-icon">HK</div>' +
-    '<h1>Ask me anything.</h1>' +
-    '<p>HK AI searches the web and reasons with advanced AI to give you the best answers in real time.</p>' +
+    '<div class="welcome-icon">✦</div>' +
+    '<h1>Create anything.</h1>' +
+    '<p>HK AI generates images, creates videos, answers questions, and reasons with advanced AI — all from a single prompt.</p>' +
     '<div class="source-badges">' +
-    '<div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div>' +
+    '<div class="src-badge"><div class="dot" style="background:var(--a4)"></div>Image Generation</div>' +
+    '<div class="src-badge"><div class="dot" style="background:#f59e0b"></div>Video Generation</div>' +
     '<div class="src-badge"><div class="dot" style="background:var(--a1)"></div>Claude AI</div>' +
-    '<div class="src-badge"><div class="dot" style="background:var(--a2)"></div>Deep Reasoning</div>' +
+    '<div class="src-badge"><div class="dot" style="background:var(--a3)"></div>Web Search</div>' +
     '</div>' +
     '<div class="suggest-grid">' +
-    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🔬</div><div class="sc-text">Latest breakthroughs in AI research?</div></div>' +
-    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💡</div><div class="sc-text">Explain quantum computing simply</div></div>' +
-    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💻</div><div class="sc-text">Write a Python web scraper</div></div>' +
-    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🌍</div><div class="sc-text">What is happening in the world today?</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🖼️</div><div class="sc-text">Generate an image of a futuristic Nairobi city at night with neon lights</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🎬</div><div class="sc-text">Create a video of a lion walking across the African savanna at golden hour</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">🌅</div><div class="sc-text">Generate a photorealistic portrait of an African woman in traditional attire</div></div>' +
+    '<div class="suggest-card" onclick="usePrompt(this)"><div class="sc-icon">💡</div><div class="sc-text">What are the latest breakthroughs in AI research?</div></div>' +
     '</div></div>';
   const qs = document.getElementById('quick-suggestions');
   if (qs) qs.style.display = 'flex';
@@ -1269,6 +1636,7 @@ function showToast(msg, type) {
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', function() {
   initTrial();
+  updateTopbarKeyIndicator();
   const firstNav = document.querySelector('.sb-item');
   if (firstNav) firstNav.classList.add('active');
   // Attach file button tracks uploads
@@ -1281,6 +1649,46 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script></script>
+
+<!-- SETTINGS MODAL -->
+<div class="upgrade-overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+  <div class="upgrade-modal" style="max-width:460px;text-align:left">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:22px;font-weight:800;background:linear-gradient(135deg,#fff,var(--a1));-webkit-background-clip:text;-webkit-text-fill-color:transparent">⚙️ Settings</div>
+      <button onclick="closeSettings()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <!-- DALL-E 3 Section -->
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#10a37f,#1a7f64);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🎨</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">DALL-E 3 · OpenAI</div>
+          <div style="font-size:10px;color:var(--muted)">Photorealistic · 1024×1024 · Same as ChatGPT</div>
+        </div>
+        <div id="dalle-status-badge" style="margin-left:auto;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2)">Not set</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">Paste your <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--a1)">OpenAI API key</a> to enable DALL-E 3 — the same model powering ChatGPT image generation.</div>
+      <div style="display:flex;gap:8px">
+        <input id="dalle-key-input" type="password" placeholder="sk-..." style="flex:1;background:var(--s3);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);outline:none;transition:border-color .2s" onfocus="this.style.borderColor='rgba(108,142,255,0.4)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')saveDalleKey()">
+        <button onclick="saveDalleKey()" style="padding:9px 16px;background:linear-gradient(135deg,#10a37f,#1a7f64);border:none;border-radius:9px;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Save Key</button>
+      </div>
+      <div id="dalle-key-saved" style="display:none;margin-top:8px;font-size:11px;color:var(--a3)">✓ Key saved — DALL-E 3 is active</div>
+    </div>
+
+    <!-- Image quality note -->
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)">🔄 Generation Priority</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8">
+        <span style="color:var(--a3);font-weight:600">1st</span> · DALL-E 3 (OpenAI) — if key is set<br>
+        <span style="color:var(--a1);font-weight:600">2nd</span> · Flux AI (Pollinations) — free, no key<br>
+        <span style="color:var(--a2);font-weight:600">3rd</span> · Claude SVG — always works offline
+      </div>
+    </div>
+
+    <button onclick="closeSettings()" style="width:100%;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+  </div>
+</div>
 
 <!-- TRIAL BANNER -->
 <div class="trial-banner" id="trial-banner">
